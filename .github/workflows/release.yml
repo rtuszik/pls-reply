@@ -1,0 +1,58 @@
+---
+name: Release
+
+on:
+    release:
+        types: [published]
+
+permissions:
+    contents: read
+
+jobs:
+    build:
+        name: Build ${{ matrix.target }}
+        runs-on: ${{ matrix.os }}
+        permissions:
+            contents: write # upload release assets
+        strategy:
+            fail-fast: false
+            matrix:
+                include:
+                    - target: x86_64-unknown-linux-gnu
+                      os: ubuntu-latest
+                    - target: aarch64-unknown-linux-gnu
+                      os: ubuntu-24.04-arm
+                    - target: x86_64-apple-darwin
+                      os: macos-13
+                    - target: aarch64-apple-darwin
+                      os: macos-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                persist-credentials: false
+
+            - name: Set up mise toolchain
+              uses: jdx/mise-action@dad1bfd3df957f44999b559dd69dc1671cb4e9ea # v4.2.1
+              with:
+                cache: false # clean, reproducible release build (avoids cache poisoning)
+
+            - name: Build
+              run: cargo build --release --locked
+
+            - name: Package
+              id: package
+              env:
+                TAG: ${{ github.event.release.tag_name }}
+                TARGET: ${{ matrix.target }}
+              run: |
+                archive="pls-${TAG}-${TARGET}.tar.gz"
+                tar -czf "$archive" -C target/release pls
+                echo "archive=$archive" >> "$GITHUB_OUTPUT"
+
+            - name: Upload to release
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                TAG: ${{ github.event.release.tag_name }}
+                ARCHIVE: ${{ steps.package.outputs.archive }}
+              run: gh release upload "$TAG" "$ARCHIVE" --clobber
