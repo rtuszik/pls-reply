@@ -1,0 +1,21 @@
+[tools]
+opengrep = "latest"
+prek = "latest"
+rust = "latest"
+zizmor = "latest"
+
+[tasks.format]
+description = "Format all Rust code with rustfmt"
+run = "cargo fmt --all"
+
+[tasks.lint]
+description = "Lint with clippy, denying warnings"
+run = "cargo clippy --all-targets --all-features -- -D warnings"
+
+[tasks.opengrep]
+description = "Static analysis with opengrep (fails on findings)"
+run = "opengrep scan --config auto --error ."
+
+[tasks.zizmor]
+description = "Audit GitHub Actions workflows with zizmor"
+run = "zizmor .github/workflows"
