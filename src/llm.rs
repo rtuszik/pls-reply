@@ -1,7 +1,7 @@
 use anyhow::{Result, bail};
 use futures::StreamExt;
 use genai::adapter::AdapterKind;
-use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatStreamEvent};
+use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatStreamEvent, ReasoningEffort};
 use genai::resolver::{AuthData, Endpoint, ServiceTargetResolver};
 use genai::{Client, ModelIden, ServiceTarget};
 use std::io::Write;
@@ -74,6 +74,12 @@ pub async fn ask(config: &Config, model_name: &str, query: &str, os: &str) -> Re
     }
     if let Some(m) = config.params.max_tokens {
         options = options.with_max_tokens(m);
+    }
+    if let Some(effort) = &config.params.reasoning_effort {
+        let effort = effort
+            .parse::<ReasoningEffort>()
+            .map_err(|_| anyhow::anyhow!("invalid reasoning_effort '{effort}'"))?;
+        options = options.with_reasoning_effort(effort);
     }
 
     let response = client

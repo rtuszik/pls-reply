@@ -15,6 +15,7 @@ api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
 [params]
 # temperature = 0.2               # optional; some reasoning models (e.g. gpt-5.x) only accept the default
 # max_tokens = 512                # optional
+# reasoning_effort = "none"       # optional; none | low | medium | high | xhigh | max | minimal (provider-dependent)
 
 [output]
 copy = true                       # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
@@ -63,6 +64,9 @@ impl ModelConfig {
 pub struct Params {
     pub temperature: Option<f64>,
     pub max_tokens: Option<u32>,
+    /// Reasoning effort hint, when supported by the provider/model.
+    /// One of: none, low, medium, high, xhigh, max, minimal.
+    pub reasoning_effort: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
