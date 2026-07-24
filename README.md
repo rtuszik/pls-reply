@@ -62,7 +62,7 @@ A minimal configuration:
 
     [model]
     provider    = "openai"
-    name        = "gpt-4o-mini"
+    name        = "gpt-5.6-luna"
     api_key_env = "OPENAI_API_KEY"
 
     [prompt]
@@ -94,10 +94,12 @@ Options:
     -m, --model <NAME>   Override the configured model for one run.
         --no-copy        Do not copy the answer to the clipboard.
 
-## Reporting bugs
-
-Open an issue at https://github.com/rtuszik/pls-reply/issues.
-
 ## License
 
-pls-reply is distributed under the MIT License. See LICENSE.
+> This program is free software. It comes without any warranty, to
+the extent permitted by applicable law. You can redistribute it
+and/or modify it under the terms of the Do What The Fuck You Want
+To Public License, Version 2, as published by Sam Hocevar. See
+http://www.wtfpl.net/ for more details.
+
+pls-reply is distributed under the WTFPL License. See LICENSE.
