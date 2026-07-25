@@ -1,4 +1,5 @@
-use std::path::PathBuf;
+use std::io::Write;
+use std::path::{Path, PathBuf};
 use std::{env, fs};
 
 use anyhow::{Context, Result};
@@ -11,6 +12,7 @@ provider    = "openai"            # openai | anthropic | gemini | groq | ollama 
 name        = "gpt-5.6-luna"
 base_url    = ""                  # optional; required for provider = "custom", else overrides the adapter default
 api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
+# api_key   = ""                  # optional; literal key, takes precedence over api_key_env (stored in plaintext)
 
 [params]
 # temperature = 0.2               # optional; some reasoning models (e.g. gpt-5.x) only accept the default
@@ -19,6 +21,7 @@ api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
 
 [output]
 copy = true                       # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
+stats = false                     # print latency / token stats to stderr after the answer
 
 [prompt]
 system = """
@@ -46,6 +49,8 @@ pub struct ModelConfig {
     base_url: Option<String>,
     #[serde(default)]
     api_key_env: Option<String>,
+    #[serde(default)]
+    api_key: Option<String>,
 }
 
 impl ModelConfig {
@@ -57,6 +62,11 @@ impl ModelConfig {
     /// API-key env var name, treating an empty string as unset.
     pub fn api_key_env(&self) -> Option<String> {
         non_empty(self.api_key_env.as_deref())
+    }
+
+    /// Literal API key from the config, treating an empty string as unset.
+    pub fn api_key(&self) -> Option<String> {
+        non_empty(self.api_key.as_deref())
     }
 }
 
@@ -73,11 +83,16 @@ pub struct Params {
 pub struct Output {
     #[serde(default = "default_true")]
     pub copy: bool,
+    #[serde(default)]
+    pub stats: bool,
 }
 
 impl Default for Output {
     fn default() -> Self {
-        Self { copy: true }
+        Self {
+            copy: true,
+            stats: false,
+        }
     }
 }
 
@@ -117,7 +132,7 @@ pub fn load() -> Result<Config> {
             fs::create_dir_all(parent)
                 .with_context(|| format!("creating config dir {}", parent.display()))?;
         }
-        fs::write(&path, DEFAULT_CONFIG)
+        write_default_config(&path)
             .with_context(|| format!("writing default config to {}", path.display()))?;
         anyhow::bail!(
             "wrote a default config to {}\nedit it and set the API key env var (e.g. export OPENAI_API_KEY=...), then re-run",
@@ -128,4 +143,21 @@ pub fn load() -> Result<Config> {
     let text =
         fs::read_to_string(&path).with_context(|| format!("reading config {}", path.display()))?;
     toml::from_str(&text).with_context(|| format!("parsing config {}", path.display()))
+}
+
+/// Write the default template, restricting it to owner-only (`0600`) at creation
+/// on Unix so a later literal `api_key` is not left group/world-readable. The
+/// mode is set on `open` (not a follow-up `chmod`) so the file is never briefly
+/// exposed.
+fn write_default_config(path: &Path) -> Result<()> {
+    let mut opts = fs::OpenOptions::new();
+    opts.write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    let mut file = opts.open(path)?;
+    file.write_all(DEFAULT_CONFIG.as_bytes())?;
+    Ok(())
 }

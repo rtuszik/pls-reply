@@ -8,6 +8,8 @@ name = "pls"
 path = "src/main.rs"
 
 [dependencies]
+anstream = "1"
+anstyle = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 futures = "0.3"

@@ -57,7 +57,8 @@ async fn main() -> Result<()> {
     let model_name = cli.model.as_deref().unwrap_or(&config.model.name);
     let query = resolve_query(&cli)?;
 
-    let answer = llm::ask(&config, model_name, &query, os_name()).await?;
+    let stats = config.output.stats || cli.stats;
+    let answer = llm::ask(&config, model_name, &query, os_name(), stats).await?;
 
     if config.output.copy && !cli.no_copy && !answer.is_empty() {
         clipboard::copy(&answer);

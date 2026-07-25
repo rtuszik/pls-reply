@@ -16,6 +16,10 @@ pub struct Cli {
     /// Don't copy the answer to the clipboard
     #[arg(long)]
     pub no_copy: bool,
+
+    /// Print latency and token stats for this run (overrides config)
+    #[arg(long)]
+    pub stats: bool,
 }
 
 impl Cli {
