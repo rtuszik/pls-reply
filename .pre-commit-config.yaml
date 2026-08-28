@@ -2,6 +2,12 @@
 minimum_pre_commit_version: "3.0.0"
 
 repos:
+
+    - repo: https://github.com/betterleaks/betterleaks
+      rev: v1.8.1
+      hooks:
+        - id: betterleaks
+
     - repo: https://github.com/pre-commit/pre-commit-hooks
       rev: v6.0.0
       hooks:
