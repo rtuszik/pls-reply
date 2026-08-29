@@ -2,6 +2,7 @@
 opengrep = "latest"
 prek = "latest"
 rust = { version = "latest", components = ["rustfmt", "clippy"] }
+vhs = "latest"
 zizmor = "latest"
 
 [tasks.format]

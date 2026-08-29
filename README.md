@@ -9,6 +9,10 @@ It is intended for one-line lookups such as "git command to show the
 first commit", where the useful reply is a single command and nothing
 else.
 
+<p align="center">
+  <img src="assets/pls-reply.gif">
+</p>
+
 ## Requirements
 
 - Rust 1.85 or later (2024 edition) to build.
@@ -23,40 +27,23 @@ Rust and the auxiliary tools (opengrep, zizmor, prek).
 
 ## Installation
 
+### mise
+
+```
+mise use -g github:rtuszik/pls-reply
+```
+
+### cargo
+
 Install a released version with cargo, replacing the tag with the
 release you want:
 
     cargo install --git https://github.com/rtuszik/pls-reply --tag v0.1.0
 
-Cargo builds pls from source and installs the binary onto its install
-path, `~/.cargo/bin` by default.
-
-Alternatively, download a prebuilt binary. Each release provides
-archives for Linux and macOS on x86_64 and aarch64. Fetch the archive
-matching your platform, extract `pls`, and place it on your PATH:
-
-    tag=v0.1.0
-    target=x86_64-unknown-linux-gnu
-    base=https://github.com/rtuszik/pls-reply/releases/download
-    curl -fsSL "$base/$tag/pls-$tag-$target.tar.gz" | tar -xz
-    install -m 0755 pls ~/.local/bin/pls
-
-The available targets are x86_64-unknown-linux-gnu,
-aarch64-unknown-linux-gnu, x86_64-apple-darwin, and
-aarch64-apple-darwin.
-
-To build from a local checkout instead:
-
-    cargo build --release
-
-The resulting binary is `target/release/pls`.
-
 ## Configuration
 
 pls reads `$XDG_CONFIG_HOME/pls/pls.toml`, falling back to
-`~/.config/pls/pls.toml`. On first run, when no configuration exists,
-pls writes a commented template to that path and exits so it can be
-edited.
+`~/.config/pls/pls.toml`. This file will be created one first run.
 
 A minimal configuration:
 
@@ -86,8 +73,7 @@ shell interpreting characters such as backticks:
 
     echo 'find files named `.prek.toml` or .pre-commit-config.yaml' | pls
 
-Run pls with no arguments and no piped input to type the query at an
-interactive prompt.
+Run pls with no arguments for an interactive prompt.
 
 Options:
 
