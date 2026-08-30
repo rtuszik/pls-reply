@@ -1,5 +1,6 @@
 ---
 minimum_pre_commit_version: "3.0.0"
+default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
 
@@ -22,6 +23,12 @@ repos:
 
     - repo: local
       hooks:
+        - id: conventional-commit
+          name: cog verify
+          entry: cog verify --file
+          language: system
+          stages: [commit-msg]
+
         - id: fmt
           name: cargo fmt
           entry: cargo fmt --all --

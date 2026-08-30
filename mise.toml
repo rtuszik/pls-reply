@@ -1,4 +1,6 @@
 [tools]
+"cargo:cargo-edit" = "latest"
+cocogitto = "latest"
 opengrep = "latest"
 prek = "latest"
 rust = { version = "latest", components = ["rustfmt", "clippy"] }

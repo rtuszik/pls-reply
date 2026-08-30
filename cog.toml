@@ -1,0 +1,16 @@
+from_latest_tag = true
+ignore_merge_commits = true
+tag_prefix = "v"
+
+pre_bump_hooks = [
+  "cargo set-version {{version}}",
+  "cargo check --release",
+  "git add :/Cargo.lock",
+]
+
+[changelog]
+path = "CHANGELOG.md"
+template = "remote"
+remote = "github.com"
+owner = "rtuszik"
+repository = "pls-reply"

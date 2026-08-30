@@ -1,14 +1,16 @@
 ---
-name: Release
+name: Publish
 
 on:
-    release:
-        types: [published]
-
-permissions:
-    contents: read
+    workflow_call:
+        inputs:
+            version:
+                description: Release Version without v prefix.
+                required: true
+                type: string
 
 jobs:
+
     build:
         name: Build ${{ matrix.target }}
         runs-on: ${{ matrix.os }}
@@ -22,8 +24,6 @@ jobs:
                       os: ubuntu-latest
                     - target: aarch64-unknown-linux-gnu
                       os: ubuntu-24.04-arm
-                    - target: x86_64-apple-darwin
-                      os: macos-13
                     - target: aarch64-apple-darwin
                       os: macos-latest
         steps:
@@ -31,6 +31,7 @@ jobs:
               uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
               with:
                 persist-credentials: false
+                ref: v${{ inputs.version }}
 
             - name: Set up mise toolchain
               uses: jdx/mise-action@3c2e0cf82a5b2e5249f0d3635a4d83d0ae861518 # v4.2.5
@@ -43,7 +44,7 @@ jobs:
             - name: Package
               id: package
               env:
-                TAG: ${{ github.event.release.tag_name }}
+                TAG: v${{ inputs.version }}
                 TARGET: ${{ matrix.target }}
               run: |
                 archive="pls-${TAG}-${TARGET}.tar.gz"
@@ -52,7 +53,7 @@ jobs:
 
             - name: Upload to release
               env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-                TAG: ${{ github.event.release.tag_name }}
+                GH_TOKEN: ${{ github.token }}
+                TAG: v${{ inputs.version }}
                 ARCHIVE: ${{ steps.package.outputs.archive }}
               run: gh release upload "$TAG" "$ARCHIVE" --clobber
