@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.4.0](https://github.com/rtuszik/pls-reply/compare/6313722e4101e99e06a69e5edc21d8989c635e2c..v0.4.0) - 2026-08-31
+#### Features
+- (**config**) add TOML schema and linting support - ([9102192](https://github.com/rtuszik/pls-reply/commit/9102192bd722053e43edb7306228e4da3885cfe8)) - Robin Tuszik
+#### Continuous Integration
+- filter release tag output in workflow - ([faa13c7](https://github.com/rtuszik/pls-reply/commit/faa13c7c2195fe2ccd9ff5e08a9d824197b55c6e)) - Robin Tuszik
+#### Miscellaneous Chores
+- (**deps**) update jdx/mise-action action to v4.3.0 - ([bdd2c36](https://github.com/rtuszik/pls-reply/commit/bdd2c36cf6b23821dab762519da66c9c37993c2b)) - koalabot-rt[bot]
+- (**deps**) update actions/checkout action to v7 - ([6313722](https://github.com/rtuszik/pls-reply/commit/6313722e4101e99e06a69e5edc21d8989c635e2c)) - koalabot-rt[bot]
+
+- - -
+
 ## [v0.3.0](https://github.com/rtuszik/pls-reply/compare/900267b79cfe18c86bd607962eeddc36c971c519..v0.3.0) - 2026-08-30
 #### Features
 - add demo recording and update installation docs - ([5d81207](https://github.com/rtuszik/pls-reply/commit/5d812076a847ac11d9baa832a5245e9b2c75fb1e)) - Robin Tuszik
