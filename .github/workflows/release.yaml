@@ -37,7 +37,11 @@ jobs:
             - name: Determine whether a release is needed
               id: plan
               run: |
-                target_tag="$(cog bump --auto --dry-run)"
+                target_tag="$(
+                    cog bump --auto --dry-run |
+                        sed -nE '/^v?[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?(\+[0-9A-Za-z.-]+)?$/p' |
+                        tail -n 1
+                )"
 
                 if [[ -z "$target_tag" ]]; then
                     echo "released=false" >> "$GITHUB_OUTPUT"
