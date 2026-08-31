@@ -1,0 +1,112 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/rtuszik/pls-reply/main/schemas/pls.schema.json",
+  "title": "pls-reply configuration",
+  "description": "Configuration for the pls-reply command-line application.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["model", "prompt"],
+  "properties": {
+    "model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "name"],
+      "properties": {
+        "provider": {
+          "description": "LLM provider adapter.",
+          "type": "string",
+          "enum": [
+            "openai",
+            "anthropic",
+            "gemini",
+            "groq",
+            "ollama",
+            "xai",
+            "deepseek",
+            "cohere",
+            "custom"
+          ]
+        },
+        "name": {
+          "description": "Model name understood by the selected provider.",
+          "type": "string",
+          "minLength": 1
+        },
+        "base_url": {
+          "description": "OpenAI-compatible endpoint for custom providers, or an override for a built-in provider.",
+          "type": "string"
+        },
+        "api_key_env": {
+          "description": "Environment variable from which to read the API key.",
+          "type": "string"
+        },
+        "api_key": {
+          "description": "Literal API key. Takes precedence over api_key_env and is stored as plaintext.",
+          "type": "string"
+        }
+      },
+      "if": {
+        "properties": {
+          "provider": { "const": "custom" }
+        },
+        "required": ["provider"]
+      },
+      "then": {
+        "required": ["base_url"],
+        "properties": {
+          "base_url": { "minLength": 1 }
+        }
+      }
+    },
+    "params": {
+      "description": "Optional model-generation parameters.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "temperature": {
+          "description": "Sampling temperature. Some reasoning models accept only their default.",
+          "type": "number"
+        },
+        "max_tokens": {
+          "description": "Maximum number of output tokens.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4294967295
+        },
+        "reasoning_effort": {
+          "description": "Provider-dependent reasoning effort hint.",
+          "type": "string",
+          "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
+        }
+      }
+    },
+    "output": {
+      "description": "Output and diagnostics settings.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "copy": {
+          "description": "Copy the answer to the system clipboard.",
+          "type": "boolean",
+          "default": true
+        },
+        "stats": {
+          "description": "Print latency and token statistics to standard error.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "prompt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system"],
+      "properties": {
+        "system": {
+          "description": "System prompt. The {os} placeholder is replaced with darwin or linux at runtime.",
+          "type": "string"
+        }
+      }
+    }
+  }
+}

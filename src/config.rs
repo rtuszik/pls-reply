@@ -7,29 +7,9 @@ use serde::Deserialize;
 
 /// The default config written on first run, also used as the template shown to
 /// the user. Keep it in sync with the `Config` struct below.
-const DEFAULT_CONFIG: &str = r#"[model]
-provider    = "openai"            # openai | anthropic | gemini | groq | ollama | xai | deepseek | cohere | custom
-name        = "gpt-5.6-luna"
-base_url    = ""                  # optional; required for provider = "custom", else overrides the adapter default
-api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
-# api_key   = ""                  # optional; literal key, takes precedence over api_key_env (stored in plaintext)
-
-[params]
-# temperature = 0.2               # optional; some reasoning models (e.g. gpt-5.x) only accept the default
-# max_tokens = 512                # optional
-# reasoning_effort = "none"       # optional; none | low | medium | high | xhigh | max | minimal (provider-dependent)
-
-[output]
-copy = true                       # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
-stats = false                     # print latency / token stats to stderr after the answer
-
-[prompt]
-system = """
-You are a terminal assistant running on a {os} unix system.
-Reply with only the single most direct shell command or answer.
-No explanation, no markdown fences, no preamble.
-"""
-"#;
+const DEFAULT_CONFIG: &str = include_str!("../pls.example.toml");
+const SCHEMA_DIRECTIVE: &str =
+    "#:schema https://raw.githubusercontent.com/rtuszik/pls-reply/main/schemas/pls.schema.json\n\n";
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -158,6 +138,7 @@ fn write_default_config(path: &Path) -> Result<()> {
         opts.mode(0o600);
     }
     let mut file = opts.open(path)?;
+    file.write_all(SCHEMA_DIRECTIVE.as_bytes())?;
     file.write_all(DEFAULT_CONFIG.as_bytes())?;
     Ok(())
 }

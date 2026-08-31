@@ -1,0 +1,4 @@
+[[schemas]]
+path = "./schemas/pls.schema.json"
+include = ["pls.example.toml"]
+strict = false

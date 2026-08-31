@@ -4,8 +4,12 @@ cocogitto = "latest"
 opengrep = "latest"
 prek = "latest"
 rust = { version = "latest", components = ["rustfmt", "clippy"] }
+tombi = "latest"
 vhs = "latest"
 zizmor = "latest"
+
+[tasks.check]
+depends = ["format", "lint", "tombi", "opengrep", "zizmor"]
 
 [tasks.format]
 description = "Format all Rust code with rustfmt"
@@ -14,6 +18,10 @@ run = "cargo fmt --all"
 [tasks.lint]
 description = "Lint with clippy, denying warnings"
 run = "cargo clippy --all-targets --all-features -- -D warnings"
+
+[tasks.tombi]
+description = "Lint TOML files and validate the example pls config against its schema"
+run = "tombi lint"
 
 [tasks.opengrep]
 description = "Static analysis with opengrep (fails on findings)"

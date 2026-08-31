@@ -23,7 +23,7 @@ else.
   still printed.
 
 The toolchain is managed with mise; running `mise install` provisions
-Rust and the auxiliary tools (opengrep, zizmor, prek).
+Rust and the auxiliary tools (opengrep, tombi, zizmor, prek).
 
 ## Installation
 
@@ -64,6 +64,11 @@ The API key is read from the environment variable named by
 `groq`, `ollama`, `xai`, `deepseek`, `cohere`, and `custom`. For
 `custom`, set `base_url` to an OpenAI-compatible endpoint.
 
+The generated config includes a Tombi schema directive, which enables
+validation and editor completions. The schema and a complete example are also
+available at [`schemas/pls.schema.json`](schemas/pls.schema.json) and
+[`pls.example.toml`](pls.example.toml).
+
 ## Usage
 
     pls git command to show first commit
@@ -87,5 +92,3 @@ Options:
 > and/or modify it under the terms of the Do What The Fuck You Want
 > To Public License, Version 2, as published by Sam Hocevar. See
 > http://www.wtfpl.net/ for more details.
-
-pls-reply is distributed under the WTFPL License. See LICENSE.
