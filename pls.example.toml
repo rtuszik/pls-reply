@@ -1,3 +1,5 @@
+#:schema https://raw.githubusercontent.com/rtuszik/pls-reply/main/schemas/pls.schema.json
+
 [model]
 provider    = "openai"            # openai | anthropic | gemini | groq | ollama | xai | deepseek | cohere | custom
 name        = "gpt-5.6-luna"

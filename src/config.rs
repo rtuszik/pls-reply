@@ -8,8 +8,6 @@ use serde::Deserialize;
 /// The default config written on first run, also used as the template shown to
 /// the user. Keep it in sync with the `Config` struct below.
 const DEFAULT_CONFIG: &str = include_str!("../pls.example.toml");
-const SCHEMA_DIRECTIVE: &str =
-    "#:schema https://raw.githubusercontent.com/rtuszik/pls-reply/main/schemas/pls.schema.json\n\n";
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
@@ -138,7 +136,6 @@ fn write_default_config(path: &Path) -> Result<()> {
         opts.mode(0o600);
     }
     let mut file = opts.open(path)?;
-    file.write_all(SCHEMA_DIRECTIVE.as_bytes())?;
     file.write_all(DEFAULT_CONFIG.as_bytes())?;
     Ok(())
 }
