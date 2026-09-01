@@ -1,10 +1,10 @@
 #:schema https://raw.githubusercontent.com/rtuszik/pls-reply/main/schemas/pls.schema.json
 
 [model]
-provider    = "openai"            # openai | anthropic | gemini | groq | ollama | xai | deepseek | cohere | custom
-name        = "gpt-5.6-luna"
-base_url    = ""                  # optional; required for provider = "custom", else overrides the adapter default
-api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
+provider = "openai"  # genai adapter name, or custom for an OpenAI-compatible endpoint
+name = "gpt-5.6-luna"
+base_url = ""  # optional; required for provider = "custom", else overrides the adapter default
+api_key_env = "OPENAI_API_KEY"  # optional; env var the API key is read from
 # api_key   = ""                  # optional; literal key, takes precedence over api_key_env (stored in plaintext)
 
 [params]
@@ -13,8 +13,8 @@ api_key_env = "OPENAI_API_KEY"    # optional; env var the API key is read from
 # reasoning_effort = "none"       # optional; none | low | medium | high | xhigh | max | minimal (provider-dependent)
 
 [output]
-copy = true                       # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
-stats = false                     # print latency / token stats to stderr after the answer
+copy = true  # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
+stats = false  # print latency / token stats to stderr after the answer
 
 [prompt]
 system = """

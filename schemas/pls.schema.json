@@ -15,17 +15,7 @@
         "provider": {
           "description": "LLM provider adapter.",
           "type": "string",
-          "enum": [
-            "openai",
-            "anthropic",
-            "gemini",
-            "groq",
-            "ollama",
-            "xai",
-            "deepseek",
-            "cohere",
-            "custom"
-          ]
+          "minLength": 1
         },
         "name": {
           "description": "Model name understood by the selected provider.",

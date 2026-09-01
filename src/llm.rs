@@ -1,5 +1,5 @@
 use anstyle::{AnsiColor, Color, Effects, Style};
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow};
 use futures::StreamExt;
 use genai::adapter::AdapterKind;
 use genai::chat::{ChatMessage, ChatOptions, ChatRequest, ChatStreamEvent, ReasoningEffort, Usage};
@@ -10,22 +10,15 @@ use std::time::{Duration, Instant};
 
 use crate::config::{Config, ModelConfig};
 
-/// Map a config `provider` string to a genai adapter. `custom` is treated as an
-/// OpenAI-compatible endpoint (requires `base_url`).
+/// Resolve a config `provider` through genai's adapter registry. `custom` is a
+/// pls alias for an OpenAI-compatible endpoint (requires `base_url`).
 fn adapter_kind(provider: &str) -> Result<AdapterKind> {
-    Ok(match provider.to_ascii_lowercase().as_str() {
-        "openai" | "custom" => AdapterKind::OpenAI,
-        "anthropic" => AdapterKind::Anthropic,
-        "gemini" => AdapterKind::Gemini,
-        "groq" => AdapterKind::Groq,
-        "ollama" => AdapterKind::Ollama,
-        "cohere" => AdapterKind::Cohere,
-        "xai" => AdapterKind::Xai,
-        "deepseek" => AdapterKind::DeepSeek,
-        other => bail!(
-            "unknown provider '{other}' (expected: openai, anthropic, gemini, groq, ollama, cohere, xai, deepseek, custom)"
-        ),
-    })
+    let provider = provider.to_ascii_lowercase();
+    if provider == "custom" {
+        return Ok(AdapterKind::OpenAI);
+    }
+
+    AdapterKind::from_lower_str(&provider).ok_or_else(|| anyhow!("unknown provider '{provider}'"))
 }
 
 /// Build a client whose resolver applies the config's `base_url` / `api_key_env`
@@ -172,6 +165,30 @@ fn format_stats(elapsed: Duration, ttft: Option<Duration>, usage: Option<&Usage>
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn resolves_adapters_from_genai_registry() {
+        assert_eq!(
+            adapter_kind("open_router").unwrap(),
+            AdapterKind::OpenRouter
+        );
+    }
+
+    #[test]
+    fn provider_names_are_case_insensitive() {
+        assert_eq!(adapter_kind("OpenAI").unwrap(), AdapterKind::OpenAI);
+    }
+
+    #[test]
+    fn custom_uses_openai_adapter() {
+        assert_eq!(adapter_kind("custom").unwrap(), AdapterKind::OpenAI);
+    }
+
+    #[test]
+    fn rejects_unknown_provider() {
+        let error = adapter_kind("not-a-provider").unwrap_err();
+        assert_eq!(error.to_string(), "unknown provider 'not-a-provider'");
+    }
 
     /// Usage with the given completion token count; other fields default/None.
     fn usage_with(completion_tokens: i32) -> Usage {
