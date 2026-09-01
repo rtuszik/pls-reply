@@ -13,6 +13,7 @@ anstream = "1"
 anstyle = "1"
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+figment = "0.10.19"
 futures = "0.3"
 genai = "0.6.5"
 serde = { version = "1", features = ["derive"] }
