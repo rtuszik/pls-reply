@@ -2,6 +2,18 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.5.0](https://github.com/rtuszik/pls-reply/compare/9e1c5504ce35f5a7dfb7efa857375b0e65b097b9..v0.5.0) - 2026-09-01
+#### Features
+- support dynamic provider adapter resolution - ([8f82f9e](https://github.com/rtuszik/pls-reply/commit/8f82f9ee35007dea939f813f83a9a5c809ad2430)) - Robin Tuszik
+#### Bug Fixes
+- (**config**) preserve schema directive in default config template - ([522d051](https://github.com/rtuszik/pls-reply/commit/522d0517677c84b8e377d507d2705243d198289a)) - Robin Tuszik
+#### Documentation
+- streamline README installation and usage guidance - ([b88cc99](https://github.com/rtuszik/pls-reply/commit/b88cc996afa0c713965c9997eb6592ada667c683)) - Robin Tuszik
+#### Build system
+- set minimum supported Rust version to 1.85 - ([9e1c550](https://github.com/rtuszik/pls-reply/commit/9e1c5504ce35f5a7dfb7efa857375b0e65b097b9)) - Robin Tuszik
+
+- - -
+
 ## [v0.4.0](https://github.com/rtuszik/pls-reply/compare/6313722e4101e99e06a69e5edc21d8989c635e2c..v0.4.0) - 2026-08-31
 #### Features
 - (**config**) add TOML schema and linting support - ([9102192](https://github.com/rtuszik/pls-reply/commit/9102192bd722053e43edb7306228e4da3885cfe8)) - Robin Tuszik
