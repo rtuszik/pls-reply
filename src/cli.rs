@@ -1,6 +1,5 @@
 use clap::Parser;
 
-/// Ask an LLM for a quick terminal answer and print it.
 #[derive(Parser, Debug)]
 #[command(name = "pls", version, about, disable_help_subcommand = true)]
 pub struct Cli {
