@@ -4,6 +4,7 @@ mod config;
 mod llm;
 
 use std::io::{self, BufRead, IsTerminal, Read, Write};
+use std::time::Instant;
 
 use anyhow::{Result, bail};
 use clap::Parser;
@@ -56,9 +57,16 @@ async fn main() -> Result<()> {
 
     let model_name = cli.model.as_deref().unwrap_or(&config.model.name);
     let query = resolve_query(&cli)?;
+    let start = Instant::now();
 
-    let stats = config.output.stats || cli.stats;
-    let answer = llm::ask(&config, model_name, &query, os_name(), stats).await?;
+    let stats = if cli.stats_json {
+        llm::Stats::Json
+    } else if config.output.stats || cli.stats {
+        llm::Stats::Human
+    } else {
+        llm::Stats::Off
+    };
+    let answer = llm::ask(&config, model_name, &query, os_name(), stats, start).await?;
 
     if config.output.copy && !cli.no_copy && !answer.is_empty() {
         clipboard::copy(&answer);

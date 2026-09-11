@@ -10,6 +10,13 @@ use std::time::{Duration, Instant};
 
 use crate::config::{Config, ModelConfig};
 
+#[derive(Clone, Copy, PartialEq)]
+pub enum Stats {
+    Off,
+    Human,
+    Json,
+}
+
 /// Resolve a config `provider` through genai's adapter registry. `custom` is a
 /// pls alias for an OpenAI-compatible endpoint (requires `base_url`).
 fn adapter_kind(provider: &str) -> Result<AdapterKind> {
@@ -66,7 +73,8 @@ pub async fn ask(
     model_name: &str,
     query: &str,
     os: &str,
-    stats: bool,
+    stats: Stats,
+    start: Instant,
 ) -> Result<String> {
     let kind = adapter_kind(&config.model.provider)?;
     let model = ModelIden::new(kind, model_name.to_string());
@@ -89,11 +97,11 @@ pub async fn ask(
         options = options.with_reasoning_effort(effort);
     }
     // Token usage is only collected during streaming when explicitly captured.
-    if stats {
+    if stats != Stats::Off {
         options = options.with_capture_usage(true);
     }
 
-    let start = Instant::now();
+    let request_start = Instant::now();
     let response = client
         .exec_chat_stream(model, chat_req, Some(&options))
         .await?;
@@ -107,9 +115,11 @@ pub async fn ask(
     while let Some(event) = stream.next().await {
         match event? {
             ChatStreamEvent::Chunk(chunk) => {
-                first_token.get_or_insert_with(Instant::now);
                 print!("{}", chunk.content);
-                let _ = stdout.flush();
+                stdout.flush()?;
+                if !chunk.content.is_empty() {
+                    first_token.get_or_insert_with(Instant::now);
+                }
                 full.push_str(&chunk.content);
             }
             // Usage arrives on the terminal event, only when capture is enabled.
@@ -119,9 +129,30 @@ pub async fn ask(
     }
     println!();
 
-    if stats {
-        let ttft = first_token.map(|t| t.duration_since(start));
-        print_stats(start.elapsed(), ttft, usage.as_ref());
+    let ttft = first_token.map(|t| t.duration_since(start));
+    match stats {
+        Stats::Off => {}
+        Stats::Human => print_stats(start.elapsed(), ttft, usage.as_ref()),
+        Stats::Json => eprintln!(
+            "{}",
+            serde_json::json!({
+                "type": "pls_stats",
+                "schema_version": 1,
+                "provider": config.model.provider,
+                "model": model_name,
+                "elapsed_ms": start.elapsed().as_secs_f64() * 1000.0,
+                "ttft_ms": ttft.map(|d| d.as_secs_f64() * 1000.0),
+                "request_ttft_ms": first_token.map(|t| t.duration_since(request_start).as_secs_f64() * 1000.0),
+                "input_tokens": usage.as_ref().and_then(|u| u.prompt_tokens),
+                "cached_input_tokens": usage.as_ref().and_then(|u| u.prompt_tokens_details.as_ref()).and_then(|d| d.cached_tokens),
+                "output_tokens": usage.as_ref().and_then(|u| u.completion_tokens),
+                "params": {
+                    "temperature": config.params.temperature,
+                    "max_tokens": config.params.max_tokens,
+                    "reasoning_effort": config.params.reasoning_effort,
+                },
+            })
+        ),
     }
 
     Ok(full.trim().to_string())

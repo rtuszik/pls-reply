@@ -54,9 +54,13 @@ Run `pls` without arguments for an interactive prompt.
     -m, --model <NAME>   Override the configured model
         --no-copy        Do not copy the response
         --stats          Print latency and token statistics
+        --stats-json     Print machine-readable timing and usage to stderr
 
 Clipboard support requires `pbcopy` on macOS or `wl-copy`, `xclip`, or `xsel`
 on Linux.
+
+Run `mise run bench` to build the release binary and benchmark it with Hyperfine.
+It measures complete response time over ten requests using your configured model.
 
 ## License
 

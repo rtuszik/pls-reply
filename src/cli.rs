@@ -20,6 +20,10 @@ pub struct Cli {
     /// Print latency and token stats for this run (overrides config)
     #[arg(long)]
     pub stats: bool,
+
+    /// Print one JSON statistics record to stderr instead of human-readable stats
+    #[arg(long, conflicts_with = "stats")]
+    pub stats_json: bool,
 }
 
 impl Cli {

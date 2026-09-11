@@ -1175,6 +1175,7 @@ dependencies = [
  "futures",
  "genai",
  "serde",
+ "serde_json",
  "tokio",
  "toml",
 ]
