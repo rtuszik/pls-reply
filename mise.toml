@@ -1,6 +1,7 @@
 [tools]
 "cargo:cargo-edit" = "latest"
 cocogitto = "latest"
+hyperfine = "latest"
 opengrep = "latest"
 prek = "latest"
 rust = { version = "latest", components = ["rustfmt", "clippy"] }
@@ -30,3 +31,11 @@ run = "opengrep scan --config auto --error ."
 [tasks.zizmor]
 description = "Audit GitHub Actions workflows with zizmor"
 run = "zizmor .github/workflows"
+
+[tasks.bench]
+description = "Benchmark pls with hyperfine"
+run = ["cargo build --release --locked", "hyperfine --runs 10 --shell=none --show-output 'target/release/pls --no-copy git command to show the first commit'"]
+
+[tasks.test]
+description = "Run Rust tests"
+run = "cargo test --all-features --locked"
