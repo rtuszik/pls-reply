@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.7.0](https://github.com/rtuszik/pls-reply/compare/54bbd717474e0b6ffec4a3daaeb9975f8b5b6cae..v0.7.0) - 2026-09-14
+#### Features
+- (**cli**) add latency profiling with text and JSON output - ([54bbd71](https://github.com/rtuszik/pls-reply/commit/54bbd717474e0b6ffec4a3daaeb9975f8b5b6cae)) - Robin Tuszik
+
+- - -
+
 ## [v0.6.0](https://github.com/rtuszik/pls-reply/compare/9f2910c10ce3844ab0201b84bc45d87e3ae89142..v0.6.0) - 2026-09-14
 #### Features
 - (**cli**) add JSON statistics output for model requests - ([d10c0d3](https://github.com/rtuszik/pls-reply/commit/d10c0d3a3a6c237553a15c286812c9b692825bc6)) - Robin Tuszik
