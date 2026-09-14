@@ -2,6 +2,7 @@ mod cli;
 mod clipboard;
 mod config;
 mod llm;
+mod profile;
 
 use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::time::Instant;
@@ -50,13 +51,32 @@ fn resolve_query(cli: &Cli) -> Result<String> {
     Ok(query)
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> Result<()> {
+fn main() -> Result<()> {
+    let start = Instant::now();
     let cli = Cli::parse();
+    let mut profile = profile::Profile::new(cli.profile || cli.profile_json, start);
+    profile.enter("runtime setup");
+    let result = (|| {
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()?;
+        runtime.block_on(run(&cli, &mut profile))
+    })();
+    profile.report(result.is_ok(), cli.profile_json);
+    result
+}
+
+async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
+    profile.enter("config");
     let config = config::load()?;
 
     let model_name = cli.model.as_deref().unwrap_or(&config.model.name);
-    let query = resolve_query(&cli)?;
+    profile.enter(if cli.query.is_empty() {
+        "input wait"
+    } else {
+        "query arguments"
+    });
+    let query = resolve_query(cli)?;
     let start = Instant::now();
 
     let stats = if cli.stats_json {
@@ -66,11 +86,23 @@ async fn main() -> Result<()> {
     } else {
         llm::Stats::Off
     };
-    let answer = llm::ask(&config, model_name, &query, os_name(), stats, start).await?;
+    profile.enter("request preparation");
+    let answer = llm::ask(
+        &config,
+        model_name,
+        &query,
+        os_name(),
+        stats,
+        start,
+        profile,
+    )
+    .await?;
 
     if config.output.copy && !cli.no_copy && !answer.is_empty() {
+        profile.enter("clipboard");
         clipboard::copy(&answer);
     }
 
+    profile.enter("cleanup");
     Ok(())
 }

@@ -55,12 +55,34 @@ Run `pls` without arguments for an interactive prompt.
         --no-copy        Do not copy the response
         --stats          Print latency and token statistics
         --stats-json     Print machine-readable timing and usage to stderr
+        --profile        Print a detailed latency breakdown to stderr
+        --profile-json   Print a machine-readable latency profile to stderr
 
 Clipboard support requires `pbcopy` on macOS or `wl-copy`, `xclip`, or `xsel`
 on Linux.
 
 Run `mise run bench` to build the release binary and benchmark it with Hyperfine.
 It measures complete response time over ten requests using your configured model.
+
+Profiling is separate from statistics and can be enabled alongside either stats
+format. For example:
+
+    pls --profile --no-copy git command to show the first commit
+
+The profile covers argument parsing, runtime setup, config loading, input,
+request preparation, time to first content, streaming, stream tail, response
+finalization, clipboard work, and cleanup. Input wait is included in the total
+but shown separately. Total time starts at entry to `main` and ends before the
+profile report; it excludes OS process startup and final process teardown.
+Network and provider time are combined. Chunk write/flush time and the first
+content-to-flush interval overlap the phases and must not be added to the total.
+A stream with no content has no streaming-content or tail phase.
+
+Failures after argument parsing emit a partial profile with the failing phase.
+Clipboard remains best-effort; its duration does not establish copy success.
+Profiles contain timings and outcomes, without prompts, answers, or credentials.
+`--profile-json` emits a `pls_profile` record with `schema_version: 1`;
+`--stats-json` retains its existing schema and timing boundaries.
 
 ## License
 
