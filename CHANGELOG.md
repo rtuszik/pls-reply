@@ -2,6 +2,17 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.6.0](https://github.com/rtuszik/pls-reply/compare/9f2910c10ce3844ab0201b84bc45d87e3ae89142..v0.6.0) - 2026-09-14
+#### Features
+- (**cli**) add JSON statistics output for model requests - ([d10c0d3](https://github.com/rtuszik/pls-reply/commit/d10c0d3a3a6c237553a15c286812c9b692825bc6)) - Robin Tuszik
+#### Continuous Integration
+- run tests through mise task and update tools - ([43079bd](https://github.com/rtuszik/pls-reply/commit/43079bda106488c2e8c18ff52bc2642a7d840c3b)) - Robin Tuszik
+#### Miscellaneous Chores
+- (**deps**) update rust crate toml to v1.1.6 (#19) - ([9596eb6](https://github.com/rtuszik/pls-reply/commit/9596eb6f383fbb8cd936bba6bbcc70c6290e7d48)) - koalabot-rt[bot], koalabot-rt[bot]
+- (**deps**) update rust crate toml to v1.1.5 (#17) - ([9f2910c](https://github.com/rtuszik/pls-reply/commit/9f2910c10ce3844ab0201b84bc45d87e3ae89142)) - koalabot-rt[bot], koalabot-rt[bot]
+
+- - -
+
 ## [v0.5.0](https://github.com/rtuszik/pls-reply/compare/9e1c5504ce35f5a7dfb7efa857375b0e65b097b9..v0.5.0) - 2026-09-01
 #### Features
 - support dynamic provider adapter resolution - ([8f82f9e](https://github.com/rtuszik/pls-reply/commit/8f82f9ee35007dea939f813f83a9a5c809ad2430)) - Robin Tuszik
