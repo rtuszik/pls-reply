@@ -75,6 +75,7 @@ pub async fn ask(
     os: &str,
     stats: Stats,
     start: Instant,
+    profile: &mut crate::profile::Profile,
 ) -> Result<String> {
     let kind = adapter_kind(&config.model.provider)?;
     let model = ModelIden::new(kind, model_name.to_string());
@@ -101,6 +102,7 @@ pub async fn ask(
         options = options.with_capture_usage(true);
     }
 
+    profile.enter("request to first content");
     let request_start = Instant::now();
     let response = client
         .exec_chat_stream(model, chat_req, Some(&options))
@@ -115,8 +117,13 @@ pub async fn ask(
     while let Some(event) = stream.next().await {
         match event? {
             ChatStreamEvent::Chunk(chunk) => {
-                print!("{}", chunk.content);
-                stdout.flush()?;
+                if !chunk.content.is_empty() {
+                    profile.content();
+                }
+                let output_start = profile.clock();
+                let flushed = write!(stdout, "{}", chunk.content).and_then(|()| stdout.flush());
+                profile.flushed(output_start, !chunk.content.is_empty() && flushed.is_ok());
+                flushed?;
                 if !chunk.content.is_empty() {
                     first_token.get_or_insert_with(Instant::now);
                 }
@@ -127,7 +134,8 @@ pub async fn ask(
             _ => {}
         }
     }
-    println!();
+    profile.stream_finished();
+    writeln!(stdout)?;
 
     let ttft = first_token.map(|t| t.duration_since(start));
     match stats {

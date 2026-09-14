@@ -17,6 +17,14 @@ pub struct Cli {
     #[arg(long)]
     pub no_copy: bool,
 
+    /// Print a detailed latency profile to stderr
+    #[arg(long, conflicts_with = "profile_json")]
+    pub profile: bool,
+
+    /// Print a JSON latency profile to stderr
+    #[arg(long)]
+    pub profile_json: bool,
+
     /// Print latency and token stats for this run (overrides config)
     #[arg(long)]
     pub stats: bool,
@@ -30,5 +38,20 @@ impl Cli {
     /// The query words joined into a single prompt string.
     pub fn query(&self) -> String {
         self.query.join(" ")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn profile_is_independent_of_stats() {
+        for profile in ["--profile", "--profile-json"] {
+            for stats in ["--stats", "--stats-json"] {
+                assert!(Cli::try_parse_from(["pls", profile, stats, "hello"]).is_ok());
+            }
+        }
+        assert!(Cli::try_parse_from(["pls", "--profile", "--profile-json", "hello"]).is_err());
     }
 }
