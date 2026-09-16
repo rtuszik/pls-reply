@@ -6,6 +6,7 @@ opengrep = "latest"
 prek = "latest"
 rust = { version = "latest", components = ["rustfmt", "clippy"] }
 tombi = "latest"
+usage = "latest"
 vhs = "latest"
 zizmor = "latest"
 
