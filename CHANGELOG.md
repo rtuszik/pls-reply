@@ -2,6 +2,12 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.7.1](https://github.com/rtuszik/pls-reply/compare/9c3782b336363fdac07982936c71a68ead53797b..v0.7.1) - 2026-09-16
+#### Bug Fixes
+- (**stats**) report effective throughput over request duration - ([9c3782b](https://github.com/rtuszik/pls-reply/commit/9c3782b336363fdac07982936c71a68ead53797b)) - Robin Tuszik
+
+- - -
+
 ## [v0.7.0](https://github.com/rtuszik/pls-reply/compare/54bbd717474e0b6ffec4a3daaeb9975f8b5b6cae..v0.7.0) - 2026-09-14
 #### Features
 - (**cli**) add latency profiling with text and JSON output - ([54bbd71](https://github.com/rtuszik/pls-reply/commit/54bbd717474e0b6ffec4a3daaeb9975f8b5b6cae)) - Robin Tuszik
