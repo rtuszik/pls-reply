@@ -8,7 +8,6 @@ use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::time::Instant;
 
 use anyhow::{Result, bail};
-use clap::Parser;
 
 use cli::Cli;
 
