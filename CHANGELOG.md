@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.8.0](https://github.com/rtuszik/pls-reply/compare/018f8bad2bb96ee6001652a0dc3a64c6e7b671da..v0.8.0) - 2026-09-16
+#### Features
+- add usage tool configuration - ([4888dcf](https://github.com/rtuszik/pls-reply/commit/4888dcf7b13fc73915655c9f97c68db3b9447adc)) - Robin Tuszik
+#### Refactoring
+- (**cli**) replace clap with usage-rs argument parsing - ([018f8ba](https://github.com/rtuszik/pls-reply/commit/018f8bad2bb96ee6001652a0dc3a64c6e7b671da)) - Robin Tuszik
+
+- - -
+
 ## [v0.7.1](https://github.com/rtuszik/pls-reply/compare/9c3782b336363fdac07982936c71a68ead53797b..v0.7.1) - 2026-09-16
 #### Bug Fixes
 - (**stats**) report effective throughput over request duration - ([9c3782b](https://github.com/rtuszik/pls-reply/commit/9c3782b336363fdac07982936c71a68ead53797b)) - Robin Tuszik
