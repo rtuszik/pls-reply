@@ -134,13 +134,14 @@ pub async fn ask(
             _ => {}
         }
     }
+    let request_elapsed = request_start.elapsed();
     profile.stream_finished();
     writeln!(stdout)?;
 
     let ttft = first_token.map(|t| t.duration_since(start));
     match stats {
         Stats::Off => {}
-        Stats::Human => print_stats(start.elapsed(), ttft, usage.as_ref()),
+        Stats::Human => print_stats(start.elapsed(), request_elapsed, usage.as_ref()),
         Stats::Json => eprintln!(
             "{}",
             serde_json::json!({
@@ -169,14 +170,14 @@ pub async fn ask(
 /// Print a dim `latency · tokens · throughput` line to stderr, with the numbers
 /// accented. `anstream` strips the styling automatically when stderr is not a
 /// terminal or `NO_COLOR` is set.
-fn print_stats(elapsed: Duration, ttft: Option<Duration>, usage: Option<&Usage>) {
-    anstream::eprintln!("{}", format_stats(elapsed, ttft, usage));
+fn print_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usage>) {
+    anstream::eprintln!("{}", format_stats(elapsed, request_elapsed, usage));
 }
 
 /// Build the styled stats line. Numbers are cyan, units/separators dim. The ANSI
 /// codes are always emitted here; stripping for non-terminals is left to the
 /// writer (`anstream`). Kept pure and separate from I/O so it can be tested.
-fn format_stats(elapsed: Duration, ttft: Option<Duration>, usage: Option<&Usage>) -> String {
+fn format_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usage>) -> String {
     const NUM: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
     const DIM: Style = Style::new().effects(Effects::DIMMED);
     let (n, nr) = (NUM.render(), NUM.render_reset());
@@ -187,14 +188,10 @@ fn format_stats(elapsed: Duration, ttft: Option<Duration>, usage: Option<&Usage>
     if let Some(tokens) = usage.and_then(|u| u.completion_tokens) {
         line += &format!("{d} · {dr}{n}{tokens}{nr}{d} tok{dr}");
 
-        // Throughput over the generation window (excludes time-to-first-token).
-        let gen_secs = ttft
-            .map(|t| elapsed.saturating_sub(t))
-            .unwrap_or(elapsed)
-            .as_secs_f64();
-        if gen_secs > 0.0 {
-            let tps = f64::from(tokens) / gen_secs;
-            line += &format!("{d} · {dr}{n}{tps:.0}{nr}{d} tok/s{dr}");
+        let request_secs = request_elapsed.as_secs_f64();
+        if request_secs > 0.0 {
+            let tps = f64::from(tokens) / request_secs;
+            line += &format!("{d} · {dr}{n}{tps:.0}{nr}{d} effective tok/s{dr}");
         }
     }
 
@@ -245,21 +242,20 @@ mod tests {
 
     #[test]
     fn full_line_strips_to_plain_text() {
-        // 284 tokens over a 1.24s generation window (1.34s total - 0.10s ttft)
-        // -> 284 / 1.24 = 229.03 -> "229" tok/s.
+        // Request time excludes the 100 ms of local preparation.
         let line = format_stats(
             Duration::from_millis(1340),
-            Some(Duration::from_millis(100)),
+            Duration::from_millis(1240),
             Some(&usage_with(284)),
         );
-        assert_eq!(plain(&line), "1.34s · 284 tok · 229 tok/s");
+        assert_eq!(plain(&line), "1.34s · 284 tok · 229 effective tok/s");
     }
 
     #[test]
     fn styling_present_before_strip() {
         let line = format_stats(
             Duration::from_millis(1340),
-            Some(Duration::from_millis(100)),
+            Duration::from_millis(1240),
             Some(&usage_with(284)),
         );
         // Raw line carries ANSI escapes (cyan = SGR 36); stripping removes them.
@@ -278,25 +274,29 @@ mod tests {
     fn latency_only_when_usage_missing() {
         let line = format_stats(
             Duration::from_millis(1340),
-            Some(Duration::from_millis(100)),
+            Duration::from_millis(1240),
             None,
         );
         assert_eq!(plain(&line), "1.34s");
     }
 
     #[test]
-    fn omits_throughput_for_zero_generation_window() {
-        // ttft == elapsed leaves a zero-length generation window: no tok/s, but
-        // the token count still shows.
-        let d = Duration::from_millis(500);
-        let line = format_stats(d, Some(d), Some(&usage_with(42)));
+    fn omits_throughput_for_zero_request_duration() {
+        let line = format_stats(
+            Duration::from_millis(500),
+            Duration::ZERO,
+            Some(&usage_with(42)),
+        );
         assert_eq!(plain(&line), "0.50s · 42 tok");
     }
 
     #[test]
-    fn throughput_uses_total_when_ttft_unknown() {
-        // No first-token timestamp -> fall back to total elapsed: 200 / 2.00 = 100.
-        let line = format_stats(Duration::from_secs(2), None, Some(&usage_with(200)));
-        assert_eq!(plain(&line), "2.00s · 200 tok · 100 tok/s");
+    fn throughput_includes_wait_for_first_content() {
+        let line = format_stats(
+            Duration::from_millis(856),
+            Duration::from_millis(850),
+            Some(&usage_with(350)),
+        );
+        assert_eq!(plain(&line), "0.86s · 350 tok · 412 effective tok/s");
     }
 }

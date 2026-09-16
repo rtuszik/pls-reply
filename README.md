@@ -64,6 +64,12 @@ on Linux.
 Run `mise run bench` to build the release binary and benchmark it with Hyperfine.
 It measures complete response time over ten requests using your configured model.
 
+The stats line labels throughput as `effective tok/s`: provider-reported
+completion tokens divided by request duration, from request start through stream
+completion. This includes time to first output and may include reasoning tokens;
+it excludes local request preparation and clipboard work. It measures effective
+request throughput, not model generation speed.
+
 Profiling is separate from statistics and can be enabled alongside either stats
 format. For example:
 
