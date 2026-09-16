@@ -83,6 +83,6 @@ jobs:
         if: needs.release.outputs.released == 'true'
         permissions:
             contents: write
-        uses: ./.github/workflows/publish.yaml
+        uses: $/.github/workflows/publish.yaml
         with:
             version: ${{ needs.release.outputs.version }}
