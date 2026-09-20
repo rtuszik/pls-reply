@@ -36,8 +36,8 @@ repos:
           pass_filenames: false
 
         - id: tombi
-          name: tombi lint
-          entry: tombi lint
+          name: mise run tombi
+          entry: mise run tombi
           language: system
           types: [toml]
           pass_filenames: false

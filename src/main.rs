@@ -1,17 +1,17 @@
 mod cli;
 mod clipboard;
+mod commit;
 mod config;
 mod llm;
 mod profile;
 
-use std::io::{self, BufRead, IsTerminal, Read, Write};
+use std::io::{self, BufRead, IsTerminal, Write};
 use std::time::Instant;
 
 use anyhow::{Result, bail};
 
-use cli::Cli;
+use cli::{Cli, Command};
 
-/// The OS name substituted into `{os}` in the system prompt.
 fn os_name() -> &'static str {
     if cfg!(target_os = "macos") {
         "darwin"
@@ -22,30 +22,30 @@ fn os_name() -> &'static str {
     }
 }
 
-/// Resolve the query from args, falling back to stdin. Reading from stdin lets
-/// the query contain shell metacharacters (backticks, `$`, quotes) that the
-/// shell would otherwise expand before they reach argv.
-fn resolve_query(cli: &Cli) -> Result<String> {
-    if !cli.query.is_empty() {
-        return Ok(cli.query());
-    }
-
+fn resolve_query() -> Result<String> {
     let stdin = io::stdin();
-    let query = if stdin.is_terminal() {
+    let interactive = stdin.is_terminal();
+    if interactive {
         eprint!("ask> ");
         io::stderr().flush().ok();
+    }
+    read_query(stdin.lock(), interactive)
+}
+
+fn read_query(mut input: impl BufRead, single_line: bool) -> Result<String> {
+    let query = if single_line {
         let mut line = String::new();
-        stdin.lock().read_line(&mut line)?;
+        input.read_line(&mut line)?;
         line
     } else {
         let mut buf = String::new();
-        stdin.lock().read_to_string(&mut buf)?;
+        input.read_to_string(&mut buf)?;
         buf
     };
 
     let query = query.trim().to_string();
     if query.is_empty() {
-        bail!("no query provided (pass it as arguments, pipe it in, or type it at the prompt)");
+        bail!("no query provided (pipe it in or type it at the prompt)");
     }
     Ok(query)
 }
@@ -70,12 +70,19 @@ async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
     let config = config::load()?;
 
     let model_name = cli.model.as_deref().unwrap_or(&config.model.name);
-    profile.enter(if cli.query.is_empty() {
-        "input wait"
-    } else {
-        "query arguments"
-    });
-    let query = resolve_query(cli)?;
+    let (system_prompt, query) = match cli.command.as_ref() {
+        None | Some(Command::Ask) => {
+            profile.enter("input wait");
+            (config.prompt.system.as_str(), resolve_query()?)
+        }
+        Some(Command::Commit) => {
+            profile.enter("staged diff");
+            (
+                config.prompt.commit.as_str(),
+                commit::staged_changes_prompt()?,
+            )
+        }
+    };
     let start = Instant::now();
 
     let stats = if cli.stats_json {
@@ -89,7 +96,10 @@ async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
     let answer = llm::ask(
         &config,
         model_name,
-        &query,
+        llm::Prompt {
+            system: system_prompt,
+            user: &query,
+        },
         os_name(),
         stats,
         start,
@@ -104,4 +114,35 @@ async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
 
     profile.enter("cleanup");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use std::io::Cursor;
+
+    use super::*;
+
+    #[test]
+    fn piped_query_reads_all_lines_verbatim() {
+        let input = "explain `git show`\nand $HOME\n";
+        assert_eq!(read_query(Cursor::new(input), false).unwrap(), input.trim());
+    }
+
+    #[test]
+    fn interactive_query_reads_one_line() {
+        let input = "first question\nsecond question\n";
+        assert_eq!(
+            read_query(Cursor::new(input), true).unwrap(),
+            "first question"
+        );
+    }
+
+    #[test]
+    fn empty_query_is_rejected() {
+        let error = read_query(Cursor::new(" \n"), false).unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "no query provided (pipe it in or type it at the prompt)"
+        );
+    }
 }

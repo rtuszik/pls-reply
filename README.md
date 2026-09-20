@@ -43,13 +43,30 @@ settings.
 
 ## Usage
 
-    pls git command to show first commit
+Run `pls` without arguments to enter a question at the prompt:
+
+    $ pls
+    ask> git command to show first commit
+
+The explicit `ask` command behaves the same way:
+
+    pls ask
 
 Queries can also be piped in:
 
-    echo 'find files named `.prek.toml` or .pre-commit-config.yaml' | pls
+    printf '%s\n' 'find files named `.prek.toml` or .pre-commit-config.yaml' | pls
+    printf '%s\n' 'find files named `.prek.toml` or .pre-commit-config.yaml' | pls ask
 
-Run `pls` without arguments for an interactive prompt.
+Generate a Conventional Commit message from the staged changes:
+
+    pls commit
+
+The generated message is printed and copied like any other answer. `pls` does
+not create the commit. Only the staged diff is sent to the configured model;
+unstaged and untracked files are excluded. Diffs larger than 256 KiB are
+rejected instead of being silently truncated. The commit system prompt can be
+customized with `prompt.commit` in `pls.toml`; existing configurations use the
+built-in Conventional Commit prompt by default.
 
     -m, --model <NAME>   Override the configured model
         --no-copy        Do not copy the response
@@ -73,7 +90,7 @@ request throughput, not model generation speed.
 Profiling is separate from statistics and can be enabled alongside either stats
 format. For example:
 
-    pls --profile --no-copy git command to show the first commit
+    printf '%s\n' 'git command to show the first commit' | pls --profile --no-copy
 
 The profile covers argument parsing, runtime setup, config loading, input,
 request preparation, time to first content, streaming, stream tail, response

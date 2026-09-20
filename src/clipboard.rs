@@ -1,14 +1,6 @@
 use std::io::Write;
 use std::process::{Command, Stdio};
 
-/// Copy `text` to the system clipboard by shelling out to the platform tool.
-///
-/// Shelling out (rather than an in-process crate) keeps the copied text alive
-/// after we exit, notably on Linux/X11 where an owning process must stay
-/// running for the selection to persist; `xclip`/`wl-copy` daemonize for us.
-///
-/// Returns `true` if a clipboard tool accepted the text, `false` if none was
-/// found (in which case the answer is still printed to stdout).
 pub fn copy(text: &str) -> bool {
     let candidates: &[(&str, &[&str])] = if cfg!(target_os = "macos") {
         &[("pbcopy", &[])]
