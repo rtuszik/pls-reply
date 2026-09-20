@@ -17,8 +17,11 @@ pub enum Stats {
     Json,
 }
 
-/// Resolve a config `provider` through genai's adapter registry. `custom` is a
-/// pls alias for an OpenAI-compatible endpoint (requires `base_url`).
+pub struct Prompt<'a> {
+    pub system: &'a str,
+    pub user: &'a str,
+}
+
 fn adapter_kind(provider: &str) -> Result<AdapterKind> {
     let provider = provider.to_ascii_lowercase();
     if provider == "custom" {
@@ -28,8 +31,6 @@ fn adapter_kind(provider: &str) -> Result<AdapterKind> {
     AdapterKind::from_lower_str(&provider).ok_or_else(|| anyhow!("unknown provider '{provider}'"))
 }
 
-/// Build a client whose resolver applies the config's `base_url` / `api_key_env`
-/// overrides on top of the adapter's defaults.
 fn build_client(model: &ModelConfig) -> Client {
     let base_url = model.base_url();
     let api_key = model.api_key();
@@ -38,10 +39,6 @@ fn build_client(model: &ModelConfig) -> Client {
     let resolver = ServiceTargetResolver::from_resolver_fn(
         move |mut target: ServiceTarget| -> Result<ServiceTarget, genai::resolver::Error> {
             if let Some(url) = &base_url {
-                // genai joins path suffixes with reqwest's URL join, which drops
-                // the last segment of a base that lacks a trailing slash (e.g.
-                // `.../v1` + `chat/completions` -> `.../chat/completions`). Ensure
-                // the trailing slash so a configured `/v1` path is preserved.
                 let url = if url.ends_with('/') {
                     url.clone()
                 } else {
@@ -49,8 +46,6 @@ fn build_client(model: &ModelConfig) -> Client {
                 };
                 target.endpoint = Endpoint::from_owned(url);
             }
-            // A literal key in the config wins over the env-var name; either
-            // overrides the adapter's default env lookup.
             if let Some(key) = &api_key {
                 target.auth = AuthData::from_single(key.clone());
             } else if let Some(env) = &api_key_env {
@@ -65,13 +60,10 @@ fn build_client(model: &ModelConfig) -> Client {
         .build()
 }
 
-/// Query the model, streaming the answer to stdout as it arrives, and return the
-/// full accumulated text for downstream use (e.g. clipboard). When `stats` is
-/// set, a latency / token-throughput line is printed to stderr after the answer.
 pub async fn ask(
     config: &Config,
     model_name: &str,
-    query: &str,
+    prompt: Prompt<'_>,
     os: &str,
     stats: Stats,
     start: Instant,
@@ -81,8 +73,11 @@ pub async fn ask(
     let model = ModelIden::new(kind, model_name.to_string());
     let client = build_client(&config.model);
 
-    let system = config.prompt.system.replace("{os}", os);
-    let chat_req = ChatRequest::new(vec![ChatMessage::system(system), ChatMessage::user(query)]);
+    let system = prompt.system.replace("{os}", os);
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(system),
+        ChatMessage::user(prompt.user),
+    ]);
 
     let mut options = ChatOptions::default();
     if let Some(t) = config.params.temperature {
@@ -97,7 +92,6 @@ pub async fn ask(
             .map_err(|_| anyhow::anyhow!("invalid reasoning_effort '{effort}'"))?;
         options = options.with_reasoning_effort(effort);
     }
-    // Token usage is only collected during streaming when explicitly captured.
     if stats != Stats::Off {
         options = options.with_capture_usage(true);
     }
@@ -129,7 +123,6 @@ pub async fn ask(
                 }
                 full.push_str(&chunk.content);
             }
-            // Usage arrives on the terminal event, only when capture is enabled.
             ChatStreamEvent::End(end) => usage = end.captured_usage,
             _ => {}
         }
@@ -167,16 +160,10 @@ pub async fn ask(
     Ok(full.trim().to_string())
 }
 
-/// Print a dim `latency · tokens · throughput` line to stderr, with the numbers
-/// accented. `anstream` strips the styling automatically when stderr is not a
-/// terminal or `NO_COLOR` is set.
 fn print_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usage>) {
     anstream::eprintln!("{}", format_stats(elapsed, request_elapsed, usage));
 }
 
-/// Build the styled stats line. Numbers are cyan, units/separators dim. The ANSI
-/// codes are always emitted here; stripping for non-terminals is left to the
-/// writer (`anstream`). Kept pure and separate from I/O so it can be tested.
 fn format_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usage>) -> String {
     const NUM: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Cyan)));
     const DIM: Style = Style::new().effects(Effects::DIMMED);
@@ -226,7 +213,6 @@ mod tests {
         assert_eq!(error.to_string(), "unknown provider 'not-a-provider'");
     }
 
-    /// Usage with the given completion token count; other fields default/None.
     fn usage_with(completion_tokens: i32) -> Usage {
         Usage {
             completion_tokens: Some(completion_tokens),
@@ -234,15 +220,12 @@ mod tests {
         }
     }
 
-    /// The plain-text form is what a non-terminal / `NO_COLOR` writer emits,
-    /// since `anstream` strips styling with this same adapter.
     fn plain(line: &str) -> String {
         anstream::adapter::strip_str(line).to_string()
     }
 
     #[test]
     fn full_line_strips_to_plain_text() {
-        // Request time excludes the 100 ms of local preparation.
         let line = format_stats(
             Duration::from_millis(1340),
             Duration::from_millis(1240),
@@ -258,7 +241,6 @@ mod tests {
             Duration::from_millis(1240),
             Some(&usage_with(284)),
         );
-        // Raw line carries ANSI escapes (cyan = SGR 36); stripping removes them.
         assert!(
             line.contains('\u{1b}'),
             "expected ANSI escapes in styled line"

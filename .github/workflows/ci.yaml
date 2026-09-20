@@ -38,7 +38,7 @@ jobs:
               run: cargo fmt --all --check
 
             - name: TOML lint
-              run: tombi lint
+              run: mise run tombi
 
             - name: Clippy
               run: cargo clippy --all-targets --all-features -- -D warnings

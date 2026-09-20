@@ -23,7 +23,10 @@ run = "cargo clippy --all-targets --all-features -- -D warnings"
 
 [tasks.tombi]
 description = "Lint TOML files and validate the example pls config against its schema"
-run = "tombi lint"
+run = [
+  "tombi lint Cargo.toml mise.toml tombi.toml",
+  "sed '1s|.*|#:schema ./schemas/pls.schema.json|' pls.example.toml | tombi lint --stdin-filename pls.example.toml -",
+]
 
 [tasks.opengrep]
 description = "Static analysis with opengrep (fails on findings)"
@@ -35,7 +38,7 @@ run = "zizmor .github/workflows"
 
 [tasks.bench]
 description = "Benchmark pls with hyperfine"
-run = ["cargo build --release --locked", "hyperfine --runs 10 --shell=none --show-output 'target/release/pls --no-copy git command to show the first commit'"]
+run = ["cargo build --release --locked", "hyperfine --runs 10 --shell=none --show-output --input assets/benchmark-query.txt 'target/release/pls --no-copy'"]
 
 [tasks.test]
 description = "Run Rust tests"
