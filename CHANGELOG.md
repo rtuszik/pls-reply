@@ -2,6 +2,15 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.9.0](https://github.com/rtuszik/pls-reply/compare/97976b3b4afb57070f11b93229dc4545d9820bb4..v0.9.0) - 2026-09-20
+#### Features
+- ![BREAKING](https://img.shields.io/badge/BREAKING-red) add commit subcommand and use ask/commit commands - ([97976b3](https://github.com/rtuszik/pls-reply/commit/97976b3b4afb57070f11b93229dc4545d9820bb4)) - Robin Tuszik
+#### Miscellaneous Chores
+- simplify commit message prompt instructions - ([a8f85cf](https://github.com/rtuszik/pls-reply/commit/a8f85cf14e79733ccc740950d6f6b9c4746729bb)) - Robin Tuszik
+- add benchmark query asset - ([29e5426](https://github.com/rtuszik/pls-reply/commit/29e54261c672c56ab1c708ab54899d84bb2881e5)) - Robin Tuszik
+
+- - -
+
 ## [v0.8.0](https://github.com/rtuszik/pls-reply/compare/018f8bad2bb96ee6001652a0dc3a64c6e7b671da..v0.8.0) - 2026-09-16
 #### Features
 - add usage tool configuration - ([4888dcf](https://github.com/rtuszik/pls-reply/commit/4888dcf7b13fc73915655c9f97c68db3b9447adc)) - Robin Tuszik
