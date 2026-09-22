@@ -1,0 +1,144 @@
+---
+name: Benchmark
+
+on:
+    workflow_dispatch:
+        inputs:
+            baseline_ref:
+                description: Git ref to compare against
+                required: true
+                default: main
+                type: string
+            runs:
+                description: Timed runs per binary
+                required: true
+                default: "25"
+                type: choice
+                options:
+                    - "10"
+                    - "25"
+                    - "50"
+                    - "100"
+
+permissions:
+    contents: read
+
+concurrency:
+    group: benchmark-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    compare:
+        name: ${{ inputs.baseline_ref }} vs ${{ github.ref_name }}
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout candidate
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 0
+                  persist-credentials: false
+
+            - name: Checkout baseline
+              uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+              with:
+                  fetch-depth: 1
+                  path: baseline
+                  persist-credentials: false
+                  ref: ${{ inputs.baseline_ref }}
+
+            - name: Set up mise toolchain
+              uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+
+            - name: Build candidate
+              run: cargo build --release --locked
+
+            - name: Build baseline
+              working-directory: baseline
+              run: cargo build --release --locked
+
+            - name: Compare binaries
+              env:
+                  BASELINE_REF: ${{ inputs.baseline_ref }}
+                  RUNS: ${{ inputs.runs }}
+              run: |
+                  set -euo pipefail
+
+                  config_home="$RUNNER_TEMP/pls-benchmark-config"
+                  mkdir -p "$config_home/pls"
+                  sed \
+                      -e 's/^provider = .*/provider = "custom"/' \
+                      -e 's/^name = .*/name = "mock"/' \
+                      -e 's|^base_url = .*|base_url = "http://127.0.0.1:40123/v1/"|' \
+                      -e 's/^api_key_env = .*/api_key = "mock"/' \
+                      -e 's/^copy = .*/copy = false/' \
+                      pls.example.toml > "$config_home/pls/pls.toml"
+                  export XDG_CONFIG_HOME="$config_home"
+
+                  python3 .github/scripts/mock-openai.py --port 40123 &
+                  mock_pid=$!
+                  trap 'kill "$mock_pid" 2>/dev/null || true' EXIT
+
+                  for attempt in {1..50}; do
+                      if curl --fail --silent http://127.0.0.1:40123/healthz >/dev/null; then
+                          break
+                      fi
+                      if [[ "$attempt" == 50 ]]; then
+                          echo "mock API did not become ready" >&2
+                          exit 1
+                      fi
+                      sleep 0.1
+                  done
+
+                  expected="git log --reverse --format=%H | head -n 1"
+                  baseline_output="$(baseline/target/release/pls --no-copy < assets/benchmark-query.txt)"
+                  candidate_output="$(target/release/pls --no-copy < assets/benchmark-query.txt)"
+                  [[ "$baseline_output" == "$expected" ]]
+                  [[ "$candidate_output" == "$expected" ]]
+
+                  baseline/target/release/pls --profile-json --no-copy \
+                      < assets/benchmark-query.txt \
+                      > /dev/null \
+                      2> "$RUNNER_TEMP/baseline-profile.json"
+                  target/release/pls --profile-json --no-copy \
+                      < assets/benchmark-query.txt \
+                      > /dev/null \
+                      2> "$RUNNER_TEMP/candidate-profile.json"
+                  python3 -m json.tool "$RUNNER_TEMP/baseline-profile.json" \
+                      > "$RUNNER_TEMP/baseline-profile-pretty.json"
+                  python3 -m json.tool "$RUNNER_TEMP/candidate-profile.json" \
+                      > "$RUNNER_TEMP/candidate-profile-pretty.json"
+
+                  hyperfine \
+                      --warmup 3 \
+                      --runs "$RUNS" \
+                      --shell=none \
+                      --input assets/benchmark-query.txt \
+                      --export-markdown "$RUNNER_TEMP/benchmark.md" \
+                      --command-name "baseline ($BASELINE_REF)" \
+                      'baseline/target/release/pls --no-copy' \
+                      --command-name "candidate ($GITHUB_REF_NAME)" \
+                      'target/release/pls --no-copy'
+
+                  {
+                      echo "## Mock API benchmark"
+                      echo
+                      echo "Candidate: \`$GITHUB_SHA\`"
+                      echo "Baseline: \`$BASELINE_REF\`"
+                      echo "Runs per binary: \`$RUNS\`"
+                      echo
+                      cat "$RUNNER_TEMP/benchmark.md"
+                      echo
+                      echo "<details>"
+                      echo "<summary>Representative internal profiles</summary>"
+                      echo
+                      echo "### Baseline"
+                      echo '```json'
+                      cat "$RUNNER_TEMP/baseline-profile-pretty.json"
+                      echo '```'
+                      echo
+                      echo "### Candidate"
+                      echo '```json'
+                      cat "$RUNNER_TEMP/candidate-profile-pretty.json"
+                      echo '```'
+                      echo "</details>"
+                  } >> "$GITHUB_STEP_SUMMARY"
