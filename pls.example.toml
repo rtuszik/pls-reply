@@ -7,6 +7,12 @@ base_url = ""  # optional; required for provider = "custom", else overrides the 
 api_key_env = "OPENAI_API_KEY"  # optional; env var the API key is read from
 # api_key   = ""                  # optional; literal key, takes precedence over api_key_env (stored in plaintext)
 
+# optional; tried in order when the previous model fails before any output (e.g. 429)
+# [[fallback]]
+# provider = "anthropic"
+# name = "claude-haiku-5-5"
+# api_key_env = "ANTHROPIC_API_KEY"
+
 [params]
 # temperature = 0.2               # optional; some reasoning models (e.g. gpt-5.x) only accept the default
 # max_tokens = 512                # optional
