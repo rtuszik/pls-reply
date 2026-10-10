@@ -60,25 +60,20 @@ fn build_client(model: &ModelConfig) -> Client {
         .build()
 }
 
-pub async fn ask(
-    config: &Config,
-    model_name: &str,
-    prompt: Prompt<'_>,
-    os: &str,
-    stats: Stats,
-    start: Instant,
-    profile: &mut crate::profile::Profile,
-) -> Result<String> {
-    let kind = adapter_kind(&config.model.provider)?;
-    let model = ModelIden::new(kind, model_name.to_string());
-    let client = build_client(&config.model);
+enum Failure {
+    BeforeOutput(anyhow::Error),
+    AfterOutput(anyhow::Error),
+}
 
-    let system = prompt.system.replace("{os}", os);
-    let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(system),
-        ChatMessage::user(prompt.user),
-    ]);
+struct Answer {
+    text: String,
+    usage: Option<Usage>,
+    request_start: Instant,
+    request_elapsed: Duration,
+    first_token: Option<Instant>,
+}
 
+fn chat_options(config: &Config, stats: Stats) -> Result<ChatOptions> {
     let mut options = ChatOptions::default();
     if let Some(t) = config.params.temperature {
         options = options.with_temperature(t);
@@ -95,12 +90,32 @@ pub async fn ask(
     if stats != Stats::Off {
         options = options.with_capture_usage(true);
     }
+    Ok(options)
+}
+
+fn candidates<'a>(config: &'a Config, model_name: &'a str) -> Vec<(&'a ModelConfig, &'a str)> {
+    std::iter::once((&config.model, model_name))
+        .chain(config.fallback.iter().map(|m| (m, m.name.as_str())))
+        .collect()
+}
+
+async fn attempt(
+    model: &ModelConfig,
+    model_name: &str,
+    chat_req: ChatRequest,
+    options: &ChatOptions,
+    profile: &mut crate::profile::Profile,
+) -> Result<Answer, Failure> {
+    let kind = adapter_kind(&model.provider).map_err(Failure::BeforeOutput)?;
+    let iden = ModelIden::new(kind, model_name.to_string());
+    let client = build_client(model);
 
     profile.enter("request to first content");
     let request_start = Instant::now();
     let response = client
-        .exec_chat_stream(model, chat_req, Some(&options))
-        .await?;
+        .exec_chat_stream(iden, chat_req, Some(options))
+        .await
+        .map_err(|e| Failure::BeforeOutput(e.into()))?;
 
     let mut stream = response.stream;
     let mut full = String::new();
@@ -109,7 +124,14 @@ pub async fn ask(
     let mut usage: Option<Usage> = None;
 
     while let Some(event) = stream.next().await {
-        match event? {
+        let event = event.map_err(|e| {
+            if first_token.is_none() {
+                Failure::BeforeOutput(e.into())
+            } else {
+                Failure::AfterOutput(e.into())
+            }
+        })?;
+        match event {
             ChatStreamEvent::Chunk(chunk) => {
                 if !chunk.content.is_empty() {
                     profile.content();
@@ -117,7 +139,7 @@ pub async fn ask(
                 let output_start = profile.clock();
                 let flushed = write!(stdout, "{}", chunk.content).and_then(|()| stdout.flush());
                 profile.flushed(output_start, !chunk.content.is_empty() && flushed.is_ok());
-                flushed?;
+                flushed.map_err(|e| Failure::AfterOutput(e.into()))?;
                 if !chunk.content.is_empty() {
                     first_token.get_or_insert_with(Instant::now);
                 }
@@ -127,27 +149,80 @@ pub async fn ask(
             _ => {}
         }
     }
-    let request_elapsed = request_start.elapsed();
-    profile.stream_finished();
-    writeln!(stdout)?;
 
-    let ttft = first_token.map(|t| t.duration_since(start));
+    Ok(Answer {
+        text: full,
+        usage,
+        request_start,
+        request_elapsed: request_start.elapsed(),
+        first_token,
+    })
+}
+
+pub async fn ask(
+    config: &Config,
+    model_name: &str,
+    prompt: Prompt<'_>,
+    os: &str,
+    stats: Stats,
+    start: Instant,
+    profile: &mut crate::profile::Profile,
+) -> Result<String> {
+    let system = prompt.system.replace("{os}", os);
+    let chat_req = ChatRequest::new(vec![
+        ChatMessage::system(system),
+        ChatMessage::user(prompt.user),
+    ]);
+    let options = chat_options(config, stats)?;
+
+    let candidates = candidates(config, model_name);
+    let mut last_error = None;
+    let mut answer = None;
+    for (i, &(model, name)) in candidates.iter().enumerate() {
+        if let Some(error) = last_error.take() {
+            let (prev_model, prev_name) = candidates[i - 1];
+            print_fallback(
+                &prev_model.provider,
+                prev_name,
+                &error,
+                &model.provider,
+                name,
+            );
+        }
+        match attempt(model, name, chat_req.clone(), &options, profile).await {
+            Ok(a) => {
+                answer = Some((model, name, a));
+                break;
+            }
+            Err(Failure::BeforeOutput(e)) => last_error = Some(e),
+            Err(Failure::AfterOutput(e)) => return Err(e),
+        }
+    }
+    let Some((model, model_name, answer)) = answer else {
+        return Err(last_error.expect("at least one model is configured"));
+    };
+
+    profile.stream_finished();
+    writeln!(std::io::stdout())?;
+
+    let ttft = answer.first_token.map(|t| t.duration_since(start));
+    let usage = answer.usage.as_ref();
     match stats {
         Stats::Off => {}
-        Stats::Human => print_stats(start.elapsed(), request_elapsed, usage.as_ref()),
+        Stats::Human => print_stats(start.elapsed(), answer.request_elapsed, usage),
         Stats::Json => eprintln!(
             "{}",
             serde_json::json!({
                 "type": "pls_stats",
                 "schema_version": 1,
-                "provider": config.model.provider,
+                "provider": model.provider,
                 "model": model_name,
                 "elapsed_ms": start.elapsed().as_secs_f64() * 1000.0,
                 "ttft_ms": ttft.map(|d| d.as_secs_f64() * 1000.0),
-                "request_ttft_ms": first_token.map(|t| t.duration_since(request_start).as_secs_f64() * 1000.0),
-                "input_tokens": usage.as_ref().and_then(|u| u.prompt_tokens),
-                "cached_input_tokens": usage.as_ref().and_then(|u| u.prompt_tokens_details.as_ref()).and_then(|d| d.cached_tokens),
-                "output_tokens": usage.as_ref().and_then(|u| u.completion_tokens),
+                "request_ttft_ms": answer.first_token.map(|t| t.duration_since(answer.request_start).as_secs_f64() * 1000.0),
+                "input_tokens": usage.and_then(|u| u.prompt_tokens),
+                "cached_input_tokens": usage.and_then(|u| u.prompt_tokens_details.as_ref()).and_then(|d| d.cached_tokens),
+                "output_tokens": usage.and_then(|u| u.completion_tokens),
                 "params": {
                     "temperature": config.params.temperature,
                     "max_tokens": config.params.max_tokens,
@@ -157,7 +232,21 @@ pub async fn ask(
         ),
     }
 
-    Ok(full.trim().to_string())
+    Ok(answer.text.trim().to_string())
+}
+
+fn print_fallback(
+    provider: &str,
+    model: &str,
+    error: &anyhow::Error,
+    next_provider: &str,
+    next_model: &str,
+) {
+    const WARN: Style = Style::new().fg_color(Some(Color::Ansi(AnsiColor::Yellow)));
+    let (w, wr) = (WARN.render(), WARN.render_reset());
+    anstream::eprintln!(
+        "{w}warning:{wr} {provider}/{model} failed: {error:#}\n{w}falling back to{wr} {next_provider}/{next_model}"
+    );
 }
 
 fn print_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usage>) {
@@ -205,6 +294,52 @@ mod tests {
     #[test]
     fn custom_uses_openai_adapter() {
         assert_eq!(adapter_kind("custom").unwrap(), AdapterKind::OpenAI);
+    }
+
+    fn config_with_fallbacks(fallbacks: &str) -> Config {
+        let text = format!(
+            "[model]\nprovider = \"openai\"\nname = \"primary\"\n\n[prompt]\nsystem = \"s\"\n{fallbacks}"
+        );
+        toml::from_str(&text).unwrap()
+    }
+
+    #[test]
+    fn candidates_without_fallbacks_is_primary_only() {
+        let config = config_with_fallbacks("");
+        let names: Vec<_> = candidates(&config, "primary").iter().map(|c| c.1).collect();
+        assert_eq!(names, ["primary"]);
+    }
+
+    #[test]
+    fn candidates_try_primary_then_fallbacks_in_order() {
+        let config = config_with_fallbacks(
+            "[[fallback]]\nprovider = \"anthropic\"\nname = \"a\"\n[[fallback]]\nprovider = \"groq\"\nname = \"b\"\n",
+        );
+        let list = candidates(&config, "override");
+        let got: Vec<_> = list
+            .iter()
+            .map(|(m, n)| (m.provider.as_str(), *n))
+            .collect();
+        assert_eq!(
+            got,
+            [("openai", "override"), ("anthropic", "a"), ("groq", "b")]
+        );
+    }
+
+    #[tokio::test]
+    async fn unknown_fallback_provider_fails_before_output() {
+        let config =
+            config_with_fallbacks("[[fallback]]\nprovider = \"not-a-provider\"\nname = \"x\"\n");
+        let mut profile = crate::profile::Profile::default();
+        let result = attempt(
+            &config.fallback[0],
+            "x",
+            ChatRequest::new(vec![]),
+            &ChatOptions::default(),
+            &mut profile,
+        )
+        .await;
+        assert!(matches!(result, Err(Failure::BeforeOutput(_))));
     }
 
     #[test]

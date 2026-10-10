@@ -11,6 +11,8 @@ const DEFAULT_CONFIG: &str = include_str!("../pls.example.toml");
 pub struct Config {
     pub model: ModelConfig,
     #[serde(default)]
+    pub fallback: Vec<ModelConfig>,
+    #[serde(default)]
     pub params: Params,
     #[serde(default)]
     pub output: Output,
@@ -156,6 +158,26 @@ system = "ask prompt"
         let text = format!("{BASE_CONFIG}commit = \"custom commit prompt\"\n");
         let config: Config = toml::from_str(&text).unwrap();
         assert_eq!(config.prompt.commit, "custom commit prompt");
+    }
+
+    #[test]
+    fn fallback_models_default_to_empty() {
+        let config: Config = toml::from_str(BASE_CONFIG).unwrap();
+        assert!(config.fallback.is_empty());
+    }
+
+    #[test]
+    fn fallback_models_are_loaded_in_order() {
+        let text = format!(
+            "{BASE_CONFIG}\n[[fallback]]\nprovider = \"anthropic\"\nname = \"first\"\n\n[[fallback]]\nprovider = \"custom\"\nname = \"second\"\nbase_url = \"http://localhost:8080/v1\"\n"
+        );
+        let config: Config = toml::from_str(&text).unwrap();
+        let names: Vec<_> = config.fallback.iter().map(|m| m.name.as_str()).collect();
+        assert_eq!(names, ["first", "second"]);
+        assert_eq!(
+            config.fallback[1].base_url().as_deref(),
+            Some("http://localhost:8080/v1")
+        );
     }
 
     #[test]

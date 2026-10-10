@@ -8,6 +8,80 @@
     "required": ["model", "prompt"],
     "properties": {
         "model": {
+            "$ref": "#/$defs/model"
+        },
+        "fallback": {
+            "description": "Models tried in order when the primary model fails before any output.",
+            "type": "array",
+            "items": {
+                "$ref": "#/$defs/model"
+            }
+        },
+        "params": {
+            "description": "Optional model-generation parameters.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "temperature": {
+                    "description": "Sampling temperature. Some reasoning models accept only their default.",
+                    "type": "number"
+                },
+                "max_tokens": {
+                    "description": "Maximum number of output tokens.",
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "reasoning_effort": {
+                    "description": "Provider-dependent reasoning effort hint.",
+                    "type": "string",
+                    "enum": [
+                        "none",
+                        "low",
+                        "medium",
+                        "high",
+                        "xhigh",
+                        "max",
+                        "minimal"
+                    ]
+                }
+            }
+        },
+        "output": {
+            "description": "Output and diagnostics settings.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "copy": {
+                    "description": "Copy the answer to the system clipboard.",
+                    "type": "boolean",
+                    "default": true
+                },
+                "stats": {
+                    "description": "Print latency and token statistics to standard error.",
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "prompt": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["system"],
+            "properties": {
+                "system": {
+                    "description": "System prompt for the ask command. The {os} placeholder is replaced with darwin or linux at runtime.",
+                    "type": "string"
+                },
+                "commit": {
+                    "description": "System prompt for generating a commit message from staged changes. Uses the built-in Conventional Commit prompt when omitted.",
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "$defs": {
+        "model": {
             "type": "object",
             "additionalProperties": false,
             "required": ["provider", "name"],
@@ -45,60 +119,6 @@
                 "required": ["base_url"],
                 "properties": {
                     "base_url": { "minLength": 1 }
-                }
-            }
-        },
-        "params": {
-            "description": "Optional model-generation parameters.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "temperature": {
-                    "description": "Sampling temperature. Some reasoning models accept only their default.",
-                    "type": "number"
-                },
-                "max_tokens": {
-                    "description": "Maximum number of output tokens.",
-                    "type": "integer",
-                    "minimum": 0,
-                    "maximum": 4294967295
-                },
-                "reasoning_effort": {
-                    "description": "Provider-dependent reasoning effort hint.",
-                    "type": "string",
-                    "enum": ["none", "low", "medium", "high", "xhigh", "max", "minimal"]
-                }
-            }
-        },
-        "output": {
-            "description": "Output and diagnostics settings.",
-            "type": "object",
-            "additionalProperties": false,
-            "properties": {
-                "copy": {
-                    "description": "Copy the answer to the system clipboard.",
-                    "type": "boolean",
-                    "default": true
-                },
-                "stats": {
-                    "description": "Print latency and token statistics to standard error.",
-                    "type": "boolean",
-                    "default": false
-                }
-            }
-        },
-        "prompt": {
-            "type": "object",
-            "additionalProperties": false,
-            "required": ["system"],
-            "properties": {
-                "system": {
-                    "description": "System prompt for the ask command. The {os} placeholder is replaced with darwin or linux at runtime.",
-                    "type": "string"
-                },
-                "commit": {
-                    "description": "System prompt for generating a commit message from staged changes. Uses the built-in Conventional Commit prompt when omitted.",
-                    "type": "string"
                 }
             }
         }

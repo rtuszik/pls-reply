@@ -41,6 +41,14 @@ Supports most LLM providers and model routers through native or
 OpenAI-compatible APIs. See [`pls.example.toml`](pls.example.toml) for all
 settings.
 
+Fallback models are tried in order when the previous model fails before any
+output is printed, for example on a rate limit:
+
+    [[fallback]]
+    provider = "anthropic"
+    name = "claude-haiku-5-5"
+    api_key_env = "ANTHROPIC_API_KEY"
+
 ## Usage
 
 Run `pls` without arguments to enter a question at the prompt:
@@ -80,6 +88,8 @@ on Linux.
 
 Run `mise run bench` to build the release binary and benchmark it with Hyperfine.
 It measures complete response time over ten requests using your configured model.
+The manually dispatched `Benchmark` GitHub Actions workflow compares its selected
+ref with a configurable baseline using the same deterministic local mock API.
 
 The stats line labels throughput as `effective tok/s`: provider-reported
 completion tokens divided by request duration, from request start through stream
