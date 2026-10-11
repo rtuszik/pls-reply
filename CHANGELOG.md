@@ -2,6 +2,34 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.10.0](https://github.com/rtuszik/pls-reply/compare/046d9061a0746606ce3d2c08f82ba82e754eb3af..v0.10.0) - 2026-10-11
+#### Features
+- (**config**) add ordered fallback models for failed requests - ([03a95e5](https://github.com/rtuszik/pls-reply/commit/03a95e534af90266793c28b7f9821bc752de48e5)) - Robin Tuszik
+- (**llm**) trim leading whitespace before first content - ([a4c07c5](https://github.com/rtuszik/pls-reply/commit/a4c07c597abd371c678c2117ef214ae1458b694c)) - Robin Tuszik
+#### Bug Fixes
+- (**mise**) remove hyperfine linux-arm64-musl lock entry - ([9893662](https://github.com/rtuszik/pls-reply/commit/9893662c9e2941285b3d4b1d60523b949a0a5ef1)) - Robin Tuszik
+#### Continuous Integration
+- add dispatchable baseline benchmark workflow - ([6d6c4a4](https://github.com/rtuszik/pls-reply/commit/6d6c4a4eee70aaae24bbdb6017a01213ecb23c0a)) - Robin Tuszik
+#### Refactoring
+- (**llm**) write to provided writer and add fallback tests - ([eeb6bd1](https://github.com/rtuszik/pls-reply/commit/eeb6bd15f8ff65e0fa2a4593aae2dea9ff5a2b98)) - Robin Tuszik
+#### Miscellaneous Chores
+- (**deps**) update pre-commit hook betterleaks/betterleaks to v1.9.0 - ([59ee101](https://github.com/rtuszik/pls-reply/commit/59ee10134e8dadbb129bdb49a4fd57ea0a7f4007)) - koalabot-rt[bot]
+- (**deps**) update dependency prek to latest - ([20d3929](https://github.com/rtuszik/pls-reply/commit/20d3929164f522a4caf8ce16a53b3092eb0391dc)) - koalabot-rt[bot]
+- (**deps**) update dependency vhs to latest - ([277316f](https://github.com/rtuszik/pls-reply/commit/277316f879013d2314217a8f116d99371ee0114e)) - koalabot-rt[bot]
+- (**deps**) update dependency rust to latest - ([99a85c5](https://github.com/rtuszik/pls-reply/commit/99a85c578b9bf5769c0fb5275ef2d42a585fcd5e)) - koalabot-rt[bot]
+- (**deps**) update jdx/mise-action action to v5 - ([81eb46d](https://github.com/rtuszik/pls-reply/commit/81eb46d8208053d00d413fc085a102224650defb)) - koalabot-rt[bot]
+- (**deps**) update dependency tombi to latest - ([25c8942](https://github.com/rtuszik/pls-reply/commit/25c89421144ca18d7de1c491145549565fe3f441)) - koalabot-rt[bot]
+- (**deps**) update dependency usage to v6.12.1 - ([9c696fb](https://github.com/rtuszik/pls-reply/commit/9c696fb8ba8340ab233eec800c8660002ef07ace)) - koalabot-rt[bot]
+- (**deps**) update dependency opengrep to latest - ([da7348b](https://github.com/rtuszik/pls-reply/commit/da7348b08cdcf438079960fcfa535fc950345897)) - koalabot-rt[bot]
+- (**deps**) update dependency hyperfine to v2 - ([93ad17a](https://github.com/rtuszik/pls-reply/commit/93ad17ada3a8e7782aa952d20d41442a94f3671b)) - koalabot-rt[bot]
+- (**deps**) update dependency opengrep to latest (#35) - ([064a70e](https://github.com/rtuszik/pls-reply/commit/064a70e283d29cebe84cd6ca5dc0c0a3efcfba7e)) - koalabot-rt[bot], koalabot-rt[bot]
+- (**deps**) update rust crate tokio to v1.53.2 (#34) - ([e8c8dc3](https://github.com/rtuszik/pls-reply/commit/e8c8dc3f26f848f82f136521727d0001ec79bc31)) - koalabot-rt[bot], koalabot-rt[bot]
+- (**deps**) update dependency tombi to latest (#26) - ([046d906](https://github.com/rtuszik/pls-reply/commit/046d9061a0746606ce3d2c08f82ba82e754eb3af)) - koalabot-rt[bot], koalabot-rt[bot]
+- (**mise**) update lockfile - ([0c6b511](https://github.com/rtuszik/pls-reply/commit/0c6b511257324238857aca88433b0567bdf893a2)) - Robin Tuszik
+- (**pre-commit**) add default stages - ([196b6d0](https://github.com/rtuszik/pls-reply/commit/196b6d0388eaca3a625efe484cb52ad4a53e3af0)) - Robin Tuszik
+
+- - -
+
 ## [v0.9.0](https://github.com/rtuszik/pls-reply/compare/97976b3b4afb57070f11b93229dc4545d9820bb4..v0.9.0) - 2026-09-20
 #### Features
 - ![BREAKING](https://img.shields.io/badge/BREAKING-red) add commit subcommand and use ask/commit commands - ([97976b3](https://github.com/rtuszik/pls-reply/commit/97976b3b4afb57070f11b93229dc4545d9820bb4)) - Robin Tuszik
