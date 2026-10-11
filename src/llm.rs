@@ -133,17 +133,18 @@ async fn attempt(
         })?;
         match event {
             ChatStreamEvent::Chunk(chunk) => {
-                if !chunk.content.is_empty() {
+                let content = visible(&chunk.content, first_token.is_some());
+                if !content.is_empty() {
                     profile.content();
                 }
                 let output_start = profile.clock();
-                let flushed = write!(stdout, "{}", chunk.content).and_then(|()| stdout.flush());
-                profile.flushed(output_start, !chunk.content.is_empty() && flushed.is_ok());
+                let flushed = write!(stdout, "{content}").and_then(|()| stdout.flush());
+                profile.flushed(output_start, !content.is_empty() && flushed.is_ok());
                 flushed.map_err(|e| Failure::AfterOutput(e.into()))?;
-                if !chunk.content.is_empty() {
+                if !content.is_empty() {
                     first_token.get_or_insert_with(Instant::now);
                 }
-                full.push_str(&chunk.content);
+                full.push_str(content);
             }
             ChatStreamEvent::End(end) => usage = end.captured_usage,
             _ => {}
@@ -157,6 +158,14 @@ async fn attempt(
         request_elapsed: request_start.elapsed(),
         first_token,
     })
+}
+
+fn visible(content: &str, started: bool) -> &str {
+    if started {
+        content
+    } else {
+        content.trim_start()
+    }
 }
 
 pub async fn ask(
@@ -340,6 +349,18 @@ mod tests {
         )
         .await;
         assert!(matches!(result, Err(Failure::BeforeOutput(_))));
+    }
+
+    #[test]
+    fn leading_whitespace_dropped_before_first_content() {
+        assert_eq!(visible("\n\n", false), "");
+        assert_eq!(visible("\n \tfeat: x", false), "feat: x");
+    }
+
+    #[test]
+    fn whitespace_kept_after_first_content() {
+        assert_eq!(visible("\n\nbody", true), "\n\nbody");
+        assert_eq!(visible(" ", true), " ");
     }
 
     #[test]
