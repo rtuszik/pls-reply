@@ -24,3 +24,6 @@ usage = { package = "usage-rs", version = "6" }
 opt-level = 3
 strip = true
 lto = true
+
+[dev-dependencies]
+tokio = { version = "1", features = ["io-util", "net"] }

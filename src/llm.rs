@@ -105,6 +105,7 @@ async fn attempt(
     chat_req: ChatRequest,
     options: &ChatOptions,
     profile: &mut crate::profile::Profile,
+    out: &mut impl Write,
 ) -> Result<Answer, Failure> {
     let kind = adapter_kind(&model.provider).map_err(Failure::BeforeOutput)?;
     let iden = ModelIden::new(kind, model_name.to_string());
@@ -119,7 +120,6 @@ async fn attempt(
 
     let mut stream = response.stream;
     let mut full = String::new();
-    let mut stdout = std::io::stdout();
     let mut first_token: Option<Instant> = None;
     let mut usage: Option<Usage> = None;
 
@@ -138,7 +138,7 @@ async fn attempt(
                     profile.content();
                 }
                 let output_start = profile.clock();
-                let flushed = write!(stdout, "{content}").and_then(|()| stdout.flush());
+                let flushed = write!(out, "{content}").and_then(|()| out.flush());
                 profile.flushed(output_start, !content.is_empty() && flushed.is_ok());
                 flushed.map_err(|e| Failure::AfterOutput(e.into()))?;
                 if !content.is_empty() {
@@ -172,14 +172,13 @@ pub async fn ask(
     config: &Config,
     model_name: &str,
     prompt: Prompt<'_>,
-    os: &str,
     stats: Stats,
     start: Instant,
     profile: &mut crate::profile::Profile,
+    out: &mut impl Write,
 ) -> Result<String> {
-    let system = prompt.system.replace("{os}", os);
     let chat_req = ChatRequest::new(vec![
-        ChatMessage::system(system),
+        ChatMessage::system(prompt.system),
         ChatMessage::user(prompt.user),
     ]);
     let options = chat_options(config, stats)?;
@@ -198,7 +197,7 @@ pub async fn ask(
                 name,
             );
         }
-        match attempt(model, name, chat_req.clone(), &options, profile).await {
+        match attempt(model, name, chat_req.clone(), &options, profile, out).await {
             Ok(a) => {
                 answer = Some((model, name, a));
                 break;
@@ -212,7 +211,7 @@ pub async fn ask(
     };
 
     profile.stream_finished();
-    writeln!(std::io::stdout())?;
+    writeln!(out)?;
 
     let ttft = answer.first_token.map(|t| t.duration_since(start));
     let usage = answer.usage.as_ref();
@@ -285,6 +284,12 @@ fn format_stats(elapsed: Duration, request_elapsed: Duration, usage: Option<&Usa
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    use tokio::net::{TcpListener, TcpStream};
+
     use super::*;
 
     #[test]
@@ -346,9 +351,163 @@ mod tests {
             ChatRequest::new(vec![]),
             &ChatOptions::default(),
             &mut profile,
+            &mut Vec::new(),
         )
         .await;
         assert!(matches!(result, Err(Failure::BeforeOutput(_))));
+    }
+
+    enum Reply {
+        Status(u16),
+        Events(Vec<String>),
+    }
+
+    fn chunk(text: &str) -> String {
+        serde_json::json!({"choices": [{"index": 0, "delta": {"content": text}}]}).to_string()
+    }
+
+    fn done() -> String {
+        "[DONE]".to_string()
+    }
+
+    fn malformed() -> String {
+        "{".to_string()
+    }
+
+    async fn read_request(sock: &mut TcpStream) {
+        let mut buf = Vec::new();
+        let mut tmp = [0; 4096];
+        loop {
+            let n = sock.read(&mut tmp).await.unwrap();
+            if n == 0 {
+                return;
+            }
+            buf.extend_from_slice(&tmp[..n]);
+            let text = String::from_utf8_lossy(&buf);
+            if let Some(end) = text.find("\r\n\r\n") {
+                let len = text[..end]
+                    .lines()
+                    .find_map(|l| {
+                        l.to_ascii_lowercase()
+                            .strip_prefix("content-length:")
+                            .map(|v| v.trim().parse::<usize>().unwrap())
+                    })
+                    .unwrap_or(0);
+                if buf.len() >= end + 4 + len {
+                    return;
+                }
+            }
+        }
+    }
+
+    async fn mock(reply: Reply) -> (String, Arc<AtomicUsize>) {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}/v1/", listener.local_addr().unwrap());
+        let hits = Arc::new(AtomicUsize::new(0));
+        let counter = Arc::clone(&hits);
+        tokio::spawn(async move {
+            loop {
+                let (mut sock, _) = listener.accept().await.unwrap();
+                counter.fetch_add(1, Ordering::SeqCst);
+                read_request(&mut sock).await;
+                let response = match &reply {
+                    Reply::Status(code) => {
+                        format!(
+                            "HTTP/1.1 {code} Error\r\ncontent-length: 0\r\nconnection: close\r\n\r\n"
+                        )
+                    }
+                    Reply::Events(events) => {
+                        let body: String =
+                            events.iter().map(|e| format!("data: {e}\n\n")).collect();
+                        format!(
+                            "HTTP/1.1 200 OK\r\ncontent-type: text/event-stream\r\nconnection: close\r\n\r\n{body}"
+                        )
+                    }
+                };
+                sock.write_all(response.as_bytes()).await.unwrap();
+                sock.shutdown().await.ok();
+            }
+        });
+        (url, hits)
+    }
+
+    fn mock_config(primary: &str, backup: &str) -> Config {
+        let text = format!(
+            "[model]\nprovider = \"custom\"\nname = \"primary\"\nbase_url = \"{primary}\"\napi_key = \"k\"\n\n[prompt]\nsystem = \"s\"\n\n[[fallback]]\nprovider = \"custom\"\nname = \"backup\"\nbase_url = \"{backup}\"\napi_key = \"k\"\n"
+        );
+        toml::from_str(&text).unwrap()
+    }
+
+    async fn run(primary: Reply, backup: Reply) -> (Result<String>, String, usize, usize) {
+        let (primary_url, primary_hits) = mock(primary).await;
+        let (backup_url, backup_hits) = mock(backup).await;
+        let config = mock_config(&primary_url, &backup_url);
+        let mut profile = crate::profile::Profile::default();
+        let mut out = Vec::new();
+        let prompt = Prompt {
+            system: "s",
+            user: "u",
+        };
+        let result = ask(
+            &config,
+            "primary",
+            prompt,
+            Stats::Off,
+            Instant::now(),
+            &mut profile,
+            &mut out,
+        )
+        .await;
+        (
+            result,
+            String::from_utf8(out).unwrap(),
+            primary_hits.load(Ordering::SeqCst),
+            backup_hits.load(Ordering::SeqCst),
+        )
+    }
+
+    #[tokio::test]
+    async fn failure_before_output_falls_back() {
+        let (result, out, primary, backup) = run(
+            Reply::Status(500),
+            Reply::Events(vec![chunk("hello"), done()]),
+        )
+        .await;
+        assert_eq!(result.unwrap(), "hello");
+        assert_eq!(out, "hello\n");
+        assert_eq!((primary, backup), (1, 1));
+    }
+
+    #[tokio::test]
+    async fn whitespace_then_error_falls_back() {
+        let (result, out, _, backup) = run(
+            Reply::Events(vec![chunk("\n\n"), malformed()]),
+            Reply::Events(vec![chunk("hello"), done()]),
+        )
+        .await;
+        assert_eq!(result.unwrap(), "hello");
+        assert_eq!(out, "hello\n");
+        assert_eq!(backup, 1);
+    }
+
+    #[tokio::test]
+    async fn stream_error_after_output_does_not_fall_back() {
+        let (result, out, primary, backup) = run(
+            Reply::Events(vec![chunk("partial"), malformed()]),
+            Reply::Events(vec![chunk("hello"), done()]),
+        )
+        .await;
+        assert!(result.is_err());
+        assert_eq!(out, "partial");
+        assert_eq!((primary, backup), (1, 0));
+    }
+
+    #[tokio::test]
+    async fn all_candidates_failing_returns_error() {
+        let (result, out, primary, backup) = run(Reply::Status(500), Reply::Status(503)).await;
+        assert!(result.is_err());
+        assert_eq!(out, "");
+        assert_eq!((primary, backup), (1, 1));
     }
 
     #[test]
