@@ -93,17 +93,18 @@ async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
         llm::Stats::Off
     };
     profile.enter("request preparation");
+    let system = system_prompt.replace("{os}", os_name());
     let answer = llm::ask(
         &config,
         model_name,
         llm::Prompt {
-            system: system_prompt,
+            system: &system,
             user: &query,
         },
-        os_name(),
         stats,
         start,
         profile,
+        &mut io::stdout(),
     )
     .await?;
 
