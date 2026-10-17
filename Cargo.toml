@@ -26,4 +26,4 @@ strip = true
 lto = true
 
 [dev-dependencies]
-tokio = { version = "1", features = ["io-util", "net"] }
+tokio = { version = "=1.53.3", features = ["io-util", "net"] }
