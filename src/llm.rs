@@ -1,3 +1,6 @@
+//! Stream one chat request through `genai`, try fallback models in order, print stats.
+//! Fall back only on failures before visible output; later errors abort.
+
 use anstyle::{AnsiColor, Color, Effects, Style};
 use anyhow::{Result, anyhow};
 use futures::StreamExt;

@@ -1,3 +1,5 @@
+//! Command-line flags and subcommands; bare `pls` means `ask`.
+
 #[derive(usage::Cli, Debug)]
 #[usage(
     bin = "pls",

@@ -1,3 +1,5 @@
+//! `pls commit`: wrap the staged Git diff in a prompt for a Conventional Commit message.
+
 use std::path::Path;
 use std::process::Command;
 

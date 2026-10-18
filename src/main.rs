@@ -1,3 +1,5 @@
+//! `pls`: stream short LLM answers to CLI questions, or draft a commit message from staged changes.
+
 mod cli;
 mod clipboard;
 mod commit;

@@ -1,3 +1,6 @@
+//! Load `pls.toml` from `$XDG_CONFIG_HOME/pls/`.
+//! On first run, write the example config and stop.
+
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::{env, fs};

@@ -1,3 +1,5 @@
+//! Copy the answer to the system clipboard via `pbcopy`, `wl-copy`, `xclip` or `xsel`.
+
 use std::io::Write;
 use std::process::{Command, Stdio};
 

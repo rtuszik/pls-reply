@@ -1,3 +1,6 @@
+//! Phase timing for `--profile` / `--profile-json`; no-op when disabled.
+//! Phases partition total runtime; output write time overlaps them.
+
 use std::time::{Duration, Instant};
 
 #[derive(Default)]
