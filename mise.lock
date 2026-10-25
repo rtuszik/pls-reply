@@ -3,7 +3,7 @@
 lockfile_version = 3
 
 [[tools."cargo:cargo-edit"]]
-version = "0.13.13"
+version = "0.13.14"
 backend = "cargo:cargo-edit"
 specifiers = ["latest"]
 
