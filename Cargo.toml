@@ -21,7 +21,7 @@ toml = "1.0"
 usage = { package = "usage-rs", version = "6" }
 
 [dev-dependencies]
-tokio = { version = "1", features = ["io-util", "net"] }
+tokio = { version = "=1.53.3", features = ["io-util", "net"] }
 
 [profile.release]
 opt-level = 3
