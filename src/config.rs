@@ -20,6 +20,8 @@ pub struct Config {
     #[serde(default)]
     pub output: Output,
     pub prompt: Prompt,
+    #[serde(default)]
+    pub commit: Commit,
 }
 
 #[derive(Debug, Deserialize)]
@@ -77,6 +79,50 @@ pub struct Prompt {
     pub system: String,
     #[serde(default = "default_commit_prompt")]
     pub commit: String,
+}
+
+#[derive(Debug, Default, Deserialize)]
+pub struct Commit {
+    #[serde(default)]
+    pub scan: ScanConfig,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct ScanConfig {
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default = "default_scan_command")]
+    pub command: Vec<String>,
+    #[serde(default = "default_leak_exit_code")]
+    pub leak_exit_code: i32,
+}
+
+impl Default for ScanConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            command: default_scan_command(),
+            leak_exit_code: default_leak_exit_code(),
+        }
+    }
+}
+
+fn default_scan_command() -> Vec<String> {
+    [
+        "betterleaks",
+        "stdin",
+        "--no-banner",
+        "--no-color",
+        "--redact",
+        "--exit-code",
+        "42",
+    ]
+    .map(str::to_owned)
+    .to_vec()
+}
+
+fn default_leak_exit_code() -> i32 {
+    42
 }
 
 fn default_true() -> bool {
@@ -181,6 +227,36 @@ system = "ask prompt"
             config.fallback[1].base_url().as_deref(),
             Some("http://localhost:8080/v1")
         );
+    }
+
+    #[test]
+    fn secret_scan_defaults_to_disabled_betterleaks() {
+        let config: Config = toml::from_str(BASE_CONFIG).unwrap();
+        let scan = &config.commit.scan;
+        assert!(!scan.enabled);
+        assert_eq!(scan.command[..2], ["betterleaks", "stdin"]);
+        assert_eq!(scan.leak_exit_code, 42);
+    }
+
+    #[test]
+    fn custom_secret_scan_is_loaded() {
+        let text = format!(
+            "{BASE_CONFIG}\n[commit.scan]\nenabled = true\ncommand = [\"gitleaks\", \"stdin\"]\nleak_exit_code = 1\n"
+        );
+        let config: Config = toml::from_str(&text).unwrap();
+        let scan = &config.commit.scan;
+        assert!(scan.enabled);
+        assert_eq!(scan.command, ["gitleaks", "stdin"]);
+        assert_eq!(scan.leak_exit_code, 1);
+    }
+
+    #[test]
+    fn example_config_matches_the_default_secret_scan() {
+        let config: Config = toml::from_str(DEFAULT_CONFIG).unwrap();
+        let scan = &config.commit.scan;
+        assert!(!scan.enabled);
+        assert_eq!(scan.command, default_scan_command());
+        assert_eq!(scan.leak_exit_code, default_leak_exit_code());
     }
 
     #[test]

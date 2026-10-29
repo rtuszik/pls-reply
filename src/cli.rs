@@ -34,7 +34,23 @@ pub struct Cli {
 pub enum Command {
     Ask,
 
-    Commit,
+    Commit(Commit),
+}
+
+#[derive(usage::Args, Debug, Default, PartialEq, Eq)]
+pub struct Commit {
+    #[usage(long, conflicts("--no-scan"))]
+    pub scan: bool,
+
+    #[usage(long)]
+    pub no_scan: bool,
+}
+
+impl Commit {
+    /// Resolve the per-run override against `commit.scan.enabled`.
+    pub fn scan_enabled(&self, configured: bool) -> bool {
+        (configured || self.scan) && !self.no_scan
+    }
 }
 
 #[cfg(test)]
@@ -55,7 +71,41 @@ mod tests {
         assert_eq!(ask.command, Some(Command::Ask));
 
         let commit = Cli::parse_from(&[OsStr::new("commit")]).unwrap();
-        assert_eq!(commit.command, Some(Command::Commit));
+        assert_eq!(commit.command, Some(Command::Commit(Commit::default())));
+    }
+
+    #[test]
+    fn commit_scan_flags_override_config() {
+        let scan = Cli::parse_from(&[OsStr::new("commit"), OsStr::new("--scan")]).unwrap();
+        let Some(Command::Commit(scan)) = scan.command else {
+            panic!("expected commit");
+        };
+        assert!(scan.scan_enabled(false));
+
+        let no_scan = Cli::parse_from(&[OsStr::new("commit"), OsStr::new("--no-scan")]).unwrap();
+        let Some(Command::Commit(no_scan)) = no_scan.command else {
+            panic!("expected commit");
+        };
+        assert!(!no_scan.scan_enabled(true));
+
+        assert!(Commit::default().scan_enabled(true));
+        assert!(!Commit::default().scan_enabled(false));
+    }
+
+    #[test]
+    fn commit_scan_flags_conflict() {
+        let argv = [
+            OsStr::new("commit"),
+            OsStr::new("--scan"),
+            OsStr::new("--no-scan"),
+        ];
+        assert!(Cli::parse_from(&argv).is_err());
+    }
+
+    #[test]
+    fn scan_flags_are_rejected_outside_commit() {
+        let argv = [OsStr::new("ask"), OsStr::new("--scan")];
+        assert!(Cli::parse_from(&argv).is_err());
     }
 
     #[test]
@@ -78,7 +128,7 @@ mod tests {
         ] {
             let cli = Cli::parse_from(&argv).unwrap();
             assert!(cli.no_copy);
-            assert_eq!(cli.command, Some(Command::Commit));
+            assert_eq!(cli.command, Some(Command::Commit(Commit::default())));
         }
     }
 

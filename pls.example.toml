@@ -22,6 +22,12 @@ api_key_env = "OPENAI_API_KEY"  # optional; env var the API key is read from
 copy = true  # copy the answer to the clipboard (pbcopy / wl-copy / xclip)
 stats = false  # print latency / token stats to stderr after the answer
 
+# optional; scan the staged diff before `pls commit` sends it (override with --scan / --no-scan)
+[commit.scan]
+enabled = false
+command = ["betterleaks", "stdin", "--no-banner", "--no-color", "--redact", "--exit-code", "42"]
+leak_exit_code = 42  # scanner exit code that means secrets were found; any other non-zero code is an error
+
 [prompt]
 system = """
 You are a terminal assistant running on a {os} unix system.
