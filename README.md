@@ -76,6 +76,19 @@ rejected instead of being silently truncated. The commit system prompt can be
 customized with `prompt.commit` in `pls.toml`; existing configurations use the
 built-in Conventional Commit prompt by default.
 
+The staged diff can be scanned for secrets before it is sent. The scanner
+receives the exact diff on standard input. If it reports secrets, or fails
+for any other reason, nothing is sent:
+
+    [commit.scan]
+    enabled = true
+    command = ["betterleaks", "stdin", "--no-banner", "--no-color", "--redact", "--exit-code", "42"]
+    leak_exit_code = 42
+
+`pls commit --scan` and `pls commit --no-scan` override `enabled` for one
+run. Any scanner that reads standard input and signals findings with a
+distinct exit code can be used.
+
     -m, --model <NAME>   Override the configured model
         --no-copy        Do not copy the response
         --stats          Print latency and token statistics

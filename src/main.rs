@@ -77,12 +77,14 @@ async fn run(cli: &Cli, profile: &mut profile::Profile) -> Result<()> {
             profile.enter("input wait");
             (config.prompt.system.as_str(), resolve_query()?)
         }
-        Some(Command::Commit) => {
+        Some(Command::Commit(args)) => {
             profile.enter("staged diff");
-            (
-                config.prompt.commit.as_str(),
-                commit::staged_changes_prompt()?,
-            )
+            let diff = commit::staged_diff()?;
+            if args.scan_enabled(config.commit.scan.enabled) {
+                profile.enter("secret scan");
+                commit::scan(&diff, &config.commit.scan)?;
+            }
+            (config.prompt.commit.as_str(), commit::prompt(&diff))
         }
     };
     let start = Instant::now();

@@ -64,6 +64,47 @@
                 }
             }
         },
+        "commit": {
+            "description": "Settings for the commit command.",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "scan": {
+                    "description": "Secret scan of the staged diff before it is sent to the model.",
+                    "type": "object",
+                    "additionalProperties": false,
+                    "properties": {
+                        "enabled": {
+                            "description": "Run the scanner by default. The --scan and --no-scan flags override this per run.",
+                            "type": "boolean",
+                            "default": false
+                        },
+                        "command": {
+                            "description": "Scanner program and arguments. The staged diff is written to its standard input.",
+                            "type": "array",
+                            "minItems": 1,
+                            "items": {
+                                "type": "string"
+                            },
+                            "default": [
+                                "betterleaks",
+                                "stdin",
+                                "--no-banner",
+                                "--no-color",
+                                "--redact",
+                                "--exit-code",
+                                "42"
+                            ]
+                        },
+                        "leak_exit_code": {
+                            "description": "Scanner exit code that means secrets were found. Any other non-zero exit code is an error.",
+                            "type": "integer",
+                            "default": 42
+                        }
+                    }
+                }
+            }
+        },
         "prompt": {
             "type": "object",
             "additionalProperties": false,
